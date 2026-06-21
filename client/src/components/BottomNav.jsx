@@ -7,9 +7,9 @@ const BottomNav = () => {
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
-    { name: 'Markets', path: '/markets', icon: Activity },
     { name: 'Trade', path: '/trade', icon: TrendingUp },
-    { name: 'Assets', path: '/wallet', icon: PieChart },
+    { name: 'Derivatives', path: '/futures', icon: Activity },
+    { name: 'Wallet', path: '/wallet', icon: PieChart },
     { name: 'Profile', path: '/profile', icon: User },
   ];
 

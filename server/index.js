@@ -12,6 +12,8 @@ import transferRoutes from './routes/transfer.js';
 import vipRoutes from './routes/vip.js';
 import earnRoutes from './routes/earn.js';
 import kycRoutes from './routes/kyc.js';
+import adminRoutes from './routes/admin.js';
+import p2pRoutes from './routes/p2p.js';
 
 dotenv.config();
 
@@ -31,6 +33,8 @@ app.use('/api/transfer', transferRoutes);
 app.use('/api/vip', vipRoutes);
 app.use('/api/earn', earnRoutes);
 app.use('/api/kyc', kycRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/p2p', p2pRoutes);
 
 // Basic health check endpoint
 app.get('/api/health', (req, res) => {

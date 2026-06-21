@@ -13,6 +13,8 @@ import Earn from './screens/Earn';
 import Profile from './screens/Profile';
 import Login from './screens/Login';
 import Register from './screens/Register';
+import Admin from './screens/Admin';
+import KYC from './screens/KYC';
 import useAuthStore from './store/useAuthStore';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -46,6 +48,8 @@ function App() {
             <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
             <Route path="/earn" element={<ProtectedRoute><Earn /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/kyc" element={<ProtectedRoute><KYC /></ProtectedRoute>} />
             
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />

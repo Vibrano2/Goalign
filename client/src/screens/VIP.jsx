@@ -1,121 +1,236 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/useAuthStore';
+import { Crown, Diamond, CheckCircle, ShieldAlert } from 'lucide-react';
 
 const VIP = () => {
   const { user } = useAuthStore();
-  const currentVolume = 12450;
-  const nextTierVolume = 50000;
-  const progressPercent = Math.min((currentVolume / nextTierVolume) * 100, 100);
+  const [activeTab, setActiveTab] = useState('Activate VIP');
+  const [vipStatus, setVipStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedTier, setSelectedTier] = useState(null);
+  const [safePassword, setSafePassword] = useState('');
+  const [upgrading, setUpgrading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const tiers = [
-    { level: 'VIP 0', volReq: '$0', maker: '0.100%', taker: '0.100%', withdrawal: '$50,000' },
-    { level: 'VIP 1', volReq: '$50K', maker: '0.080%', taker: '0.090%', withdrawal: '$100,000' },
-    { level: 'VIP 2', volReq: '$500K', maker: '0.060%', taker: '0.080%', withdrawal: '$500,000' },
-    { level: 'VIP 3', volReq: '$5M', maker: '0.040%', taker: '0.060%', withdrawal: '$2,000,000' },
-    { level: 'VIP 4', volReq: '$25M', maker: '0.020%', taker: '0.040%', withdrawal: '$5,000,000' },
-    { level: 'VIP 5', volReq: '$100M', maker: '0.000%', taker: '0.020%', withdrawal: '$10,000,000' },
+  useEffect(() => {
+    fetchVipStatus();
+  }, [user]);
+
+  const fetchVipStatus = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/api/vip/status/${user.uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        setVipStatus(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch VIP status', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpgrade = async () => {
+    if (!selectedTier) {
+      setError('Please select a VIP package to upgrade.');
+      return;
+    }
+    if (!safePassword) {
+      setError('Please enter your safe password.');
+      return;
+    }
+    
+    setError('');
+    setSuccess('');
+    setUpgrading(true);
+
+    try {
+      const response = await fetch('/api/vip/upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firebaseUid: user.uid,
+          targetLevel: selectedTier,
+          safePassword
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to upgrade');
+      
+      setSuccess(data.message);
+      setSafePassword('');
+      fetchVipStatus(); // Refresh status
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  if (loading) return <div className="min-h-screen bg-[#f5f6fa] flex items-center justify-center">Loading VIP...</div>;
+
+  const packages = [
+    { level: 1, daily: 10, monthly: 30, valid: 60, price: 50, bg: 'bg-gradient-to-r from-[#f0f2f5] to-[#e4e7eb]', text: 'text-gray-700', icon: <Crown className="w-8 h-8 text-gray-400" /> },
+    { level: 2, daily: 100, monthly: 3000, valid: 60, price: 500, bg: 'bg-gradient-to-r from-[#e6e6fa] to-[#d8bfd8]', text: 'text-purple-800', icon: <Crown className="w-8 h-8 text-purple-400" /> },
+    { level: 3, daily: 30000, monthly: 450000, valid: 90, price: 3000, bg: 'bg-gradient-to-r from-[#ffe4e1] to-[#ffb6c1]', text: 'text-rose-800', icon: <Crown className="w-8 h-8 text-rose-400" /> },
+    { level: 4, daily: 80000, monthly: 950000, valid: 90, price: 5000, bg: 'bg-gradient-to-r from-[#e0ffff] to-[#afeeee]', text: 'text-cyan-800', icon: <Crown className="w-8 h-8 text-cyan-500" /> },
+    { level: 5, daily: 150000, monthly: 2500000, valid: 365, price: 10000, bg: 'bg-gradient-to-r from-[#fffacd] to-[#ffd700]', text: 'text-yellow-800', icon: <Crown className="w-8 h-8 text-yellow-600" /> },
+    { level: 6, daily: 300000, monthly: 4500000, valid: 365, price: 50000, bg: 'bg-gradient-to-r from-[#e6e6fa] to-[#dda0dd]', text: 'text-fuchsia-800', icon: <Crown className="w-8 h-8 text-fuchsia-400" /> },
+    { level: 7, daily: 500000, monthly: 8000000, valid: 365, price: 100000, bg: 'bg-gradient-to-r from-[#2c3e50] to-[#34495e]', text: 'text-white', icon: <Diamond className="w-8 h-8 text-gray-300" /> },
+    { level: 8, daily: 1000000, monthly: 20000000, valid: 365, price: 300000, bg: 'bg-gradient-to-r from-[#000000] to-[#1a1a1a]', text: 'text-[#ffd700]', icon: <Diamond className="w-8 h-8 text-[#ffd700]" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="bg-[#03045E] py-16 px-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent opacity-10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-        <div className="container mx-auto max-w-6xl relative z-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="text-white max-w-xl">
-              <h1 className="text-4xl md:text-5xl font-extrabold mb-4">Goalign VIP Program</h1>
-              <p className="text-lg text-blue-200 mb-6">Enjoy lower trading fees, higher withdrawal limits, and exclusive institutional benefits.</p>
-              <button className="bg-accent text-primary px-8 py-3 rounded-md font-bold hover:bg-opacity-90 transition">
-                View My Privileges
+    <div className="min-h-screen bg-[#f5f6fa] pb-24 font-sans">
+      {/* Header */}
+      <div className="bg-[#2185ff] pt-8 pb-16 px-4 rounded-b-3xl text-white">
+        <div className="flex justify-center space-x-8 text-sm font-bold mb-6">
+          <button 
+            onClick={() => setActiveTab('Activate VIP')}
+            className={`pb-1 transition-all ${activeTab === 'Activate VIP' ? 'border-b-2 border-white text-white' : 'text-white/70 hover:text-white'}`}
+          >
+            Activate VIP
+          </button>
+          <button 
+            onClick={() => setActiveTab('Activation record')}
+            className={`pb-1 transition-all ${activeTab === 'Activation record' ? 'border-b-2 border-white text-white' : 'text-white/70 hover:text-white'}`}
+          >
+            Activation record
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center font-bold text-2xl border-2 border-white/40">
+            {user?.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-lg">{user?.displayName || 'User'}</span>
+              <span className="bg-orange-500 text-xs px-2 py-0.5 rounded-full font-bold flex items-center space-x-1">
+                <Crown className="w-3 h-3" />
+                <span>VIP {vipStatus?.vipLevel || 0}</span>
+              </span>
+            </div>
+            <div className="text-xs text-white/80 mt-1">
+              Referral code: <span className="font-mono">M6224308</span>
+            </div>
+            <div className="text-xs text-white/80">
+              Margin release time: 2028-02-02 17:50
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {activeTab === 'Activate VIP' && (
+        <>
+          {/* Limits Card */}
+          <div className="px-4 -mt-10 relative z-10 mb-6">
+            <div className="bg-white rounded-xl shadow-md p-4 flex justify-between items-center text-center">
+              <div className="flex-1 border-r border-gray-100">
+                <div className="font-extrabold text-xl text-gray-800">{vipStatus?.limits?.daily || 0}</div>
+                <div className="text-xs text-gray-500 mt-1">Daily transfer limit</div>
+              </div>
+              <div className="flex-1">
+                <div className="font-extrabold text-xl text-gray-800">{vipStatus?.limits?.monthly || 0}</div>
+                <div className="text-xs text-gray-500 mt-1">Monthly transfer limit</div>
+              </div>
+            </div>
+          </div>
+
+          {/* VIP Packages */}
+          <div className="px-4">
+            <div className="flex items-center space-x-1 mb-4">
+              <div className="w-1 h-4 bg-[#2185ff] rounded-full"></div>
+              <h3 className="font-bold text-gray-700 text-sm">VIP package</h3>
+            </div>
+
+            <div className="space-y-3">
+              {packages.map((pkg) => (
+                <div 
+                  key={pkg.level} 
+                  onClick={() => setSelectedTier(pkg.level)}
+                  className={`${pkg.bg} rounded-2xl p-4 relative overflow-hidden shadow-sm cursor-pointer border-2 transition-all ${selectedTier === pkg.level ? 'border-[#2185ff] shadow-md scale-[1.02]' : 'border-transparent'}`}
+                >
+                  {/* Card Content */}
+                  <div className="flex justify-between items-start relative z-10">
+                    <div>
+                      <div className="flex items-end space-x-2 mb-2">
+                        <span className={`text-3xl font-black italic tracking-tighter ${pkg.text}`}>V{pkg.level}</span>
+                        <span className="text-[10px] text-orange-500 font-bold mb-1">View details</span>
+                      </div>
+                      <div className={`text-[11px] leading-tight ${pkg.level >= 7 ? 'text-gray-300' : 'text-gray-600'}`}>
+                        <div>Daily transfer limit: {pkg.daily}</div>
+                        <div>Monthly transfer limit: {pkg.monthly}</div>
+                        <div>valid date: {pkg.valid}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end justify-between h-full space-y-4">
+                      {/* Icon Box */}
+                      <div className="w-14 h-14 bg-white/30 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner border border-white/40">
+                        {pkg.icon}
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <span className="text-orange-500 font-bold text-sm">${pkg.price}.00</span>
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${selectedTier === pkg.level ? 'bg-[#2185ff] text-white' : 'border border-gray-400/50'}`}>
+                          {selectedTier === pkg.level && <CheckCircle className="w-4 h-4" />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Info Text */}
+            <div className="mt-6 text-[10px] text-orange-500 leading-tight">
+              Except for VIP1, the USDT paid by other VIP members is a deposit. When your membership expires or you no longer need to use membership functions, you can send an email to customer service to apply for a refund of your deposit. Subscribers are not charged USDT.
+            </div>
+
+            {/* Checkout Section */}
+            <div className="mt-6 space-y-3">
+              {error && <div className="text-xs text-red-500 flex items-center"><ShieldAlert className="w-3 h-3 mr-1"/>{error}</div>}
+              {success && <div className="text-xs text-green-500 flex items-center"><CheckCircle className="w-3 h-3 mr-1"/>{success}</div>}
+              
+              <div className="bg-gray-100 rounded-lg py-3 px-4 flex items-center justify-between text-sm">
+                <span className="text-gray-600">Balance ( <span className="font-bold text-gray-800">{vipStatus?.balance?.toFixed(2) || '0.00'}</span> )</span>
+                <div className="w-5 h-5 rounded-full bg-[#2185ff] text-white flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4" />
+                </div>
+              </div>
+
+              <input 
+                type="password" 
+                placeholder="Enter safe password" 
+                className="w-full bg-white border border-gray-200 rounded-lg py-3 px-4 text-sm focus:outline-none focus:border-[#2185ff]"
+                value={safePassword}
+                onChange={(e) => setSafePassword(e.target.value)}
+              />
+
+              <button 
+                onClick={handleUpgrade}
+                disabled={upgrading}
+                className="w-full bg-[#2185ff] text-white rounded-full py-3.5 font-bold text-sm shadow-lg shadow-blue-500/30 hover:bg-blue-600 transition disabled:opacity-50"
+              >
+                {upgrading ? 'Processing...' : 'Upgrade now'}
               </button>
             </div>
-            
-            {/* User Progress Card */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl w-full md:w-96 text-white">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center text-accent font-bold text-xl border border-accent/50">
-                    {user?.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <div>
-                    <div className="font-bold text-lg">{user?.displayName || 'User'}</div>
-                    <div className="text-sm text-accent font-medium">Current: VIP 0</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-blue-200">30-Day Volume</span>
-                  <span className="font-bold">${currentVolume.toLocaleString()} / ${nextTierVolume.toLocaleString()}</span>
-                </div>
-                <div className="w-full bg-black/30 rounded-full h-2 mb-2">
-                  <div className="bg-accent h-2 rounded-full" style={{ width: `${progressPercent}%` }}></div>
-                </div>
-                <div className="text-xs text-blue-200 text-right">
-                  Upgrade to VIP 1 requires ${ (nextTierVolume - currentVolume).toLocaleString() } more volume.
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      {/* Benefits Table */}
-      <div className="container mx-auto max-w-6xl px-4 py-16">
-        <h2 className="text-2xl font-bold text-primary mb-8 text-center">VIP Tier Benefits</h2>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-blue-50 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-blue-50/50 text-secondary text-sm">
-                  <th className="px-6 py-4 font-bold border-b border-blue-100">Tier Level</th>
-                  <th className="px-6 py-4 font-bold border-b border-blue-100">30-Day Trading Vol</th>
-                  <th className="px-6 py-4 font-bold border-b border-blue-100 text-center">Maker Fee</th>
-                  <th className="px-6 py-4 font-bold border-b border-blue-100 text-center">Taker Fee</th>
-                  <th className="px-6 py-4 font-bold border-b border-blue-100 text-right">Daily Withdrawal Limit</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-blue-50">
-                {tiers.map((tier, idx) => (
-                  <tr key={tier.level} className={`hover:bg-blue-50/30 transition ${idx === 0 ? 'bg-blue-50/20' : ''}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        {idx === 0 && <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span>}
-                        <span className={`font-bold ${idx === 0 ? 'text-accent' : 'text-primary'}`}>{tier.level}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-secondary font-medium">&ge; {tier.volReq}</td>
-                    <td className="px-6 py-4 text-center font-mono text-secondary">{tier.maker}</td>
-                    <td className="px-6 py-4 text-center font-mono text-secondary">{tier.taker}</td>
-                    <td className="px-6 py-4 text-right font-medium text-primary">{tier.withdrawal}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {activeTab === 'Activation record' && (
+        <div className="px-4 -mt-10 relative z-10 mb-6">
+          <div className="bg-white rounded-xl shadow-md p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
+            <div className="text-4xl mb-4 opacity-50">📋</div>
+            <h3 className="font-bold text-gray-700">No Activation Records</h3>
+            <p className="text-xs text-gray-400 mt-2">You haven't activated any VIP subscriptions yet.</p>
           </div>
         </div>
-
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="text-center p-6">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-primary font-bold text-xl">1</div>
-            <h3 className="font-bold text-primary mb-2">Dedicated Account Manager</h3>
-            <p className="text-secondary text-sm">VIP 3+ users receive 24/7 priority support and a dedicated institutional account manager.</p>
-          </div>
-          <div className="text-center p-6">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-primary font-bold text-xl">2</div>
-            <h3 className="font-bold text-primary mb-2">Exclusive OTC Access</h3>
-            <p className="text-secondary text-sm">Execute large block trades privately with zero slippage via our secure OTC desk.</p>
-          </div>
-          <div className="text-center p-6">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-primary font-bold text-xl">3</div>
-            <h3 className="font-bold text-primary mb-2">Custom API Limits</h3>
-            <p className="text-secondary text-sm">Unlock higher frequency API rate limits for your quantitative trading algorithms.</p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

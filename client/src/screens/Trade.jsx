@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart } from 'lightweight-charts';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
+import useAuthStore from '../store/useAuthStore';
 
 const SYMBOL = 'BTCUSDT';
 const INTERVAL = '1m';
@@ -16,6 +17,77 @@ const Trade = () => {
   
   const [ticker, setTicker] = useState({ p: '0.00', c: '0.00', h: '0.00', l: '0.00', v: '0.00' });
   const [orderBook, setOrderBook] = useState({ bids: [], asks: [] });
+
+  const { user } = useAuthStore();
+  const [balances, setBalances] = useState({ USDT: 0, BTC: 0 });
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const fetchBalances = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`https://goalign-mrkd.onrender.com/api/wallet/balances/${user.uid}`);
+      const data = await res.json();
+      if (res.ok && data.balances) {
+        const newBalances = { USDT: 0, BTC: 0 };
+        data.balances.forEach(b => {
+          if (b.account_type === 'spot') {
+            if (b.asset === 'USDT') newBalances.USDT = parseFloat(b.available);
+            if (b.asset === 'BTC') newBalances.BTC = parseFloat(b.available);
+          }
+        });
+        setBalances(newBalances);
+      }
+    } catch (err) {
+      console.error('Failed to fetch balances:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchBalances();
+  }, [user]);
+
+  const handlePlaceOrder = async () => {
+    if (!user) {
+      setMessage('Please login first');
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      setMessage('Enter a valid amount');
+      return;
+    }
+    
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const res = await fetch('https://goalign-mrkd.onrender.com/api/trade/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.uid,
+          symbol: SYMBOL,
+          side: side.toLowerCase(),
+          type: orderType.toLowerCase(),
+          price: orderType === 'Market' ? 0 : parseFloat(price),
+          amount: parseFloat(amount)
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(`Order placed successfully!`);
+        fetchBalances();
+        setAmount('');
+      } else {
+        setMessage(data.error || 'Failed to place order');
+      }
+    } catch (err) {
+      setMessage('Network error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Chart setup & WebSocket
   useEffect(() => {
@@ -41,7 +113,7 @@ const Trade = () => {
       });
       chartRef.current = chart;
 
-      const candlestickSeries = chart.addCandlestickSeries({
+      const candlestickSeries = chart.addSeries(CandlestickSeries, {
         upColor: '#00B4D8', // Goalign Accent Cyan
         downColor: '#ef5350', // Red for down
         borderVisible: false,
@@ -226,7 +298,9 @@ const Trade = () => {
 
           <div className="flex justify-between text-xs text-[#90E0EF] mb-2">
             <span>Avail</span>
-            <span className="font-mono text-white">0.00 USDT</span>
+            <span className="font-mono text-white">
+              {side === 'Buy' ? `${balances.USDT.toFixed(2)} USDT` : `${balances.BTC.toFixed(6)} BTC`}
+            </span>
           </div>
 
           <div className="space-y-4">
@@ -275,8 +349,18 @@ const Trade = () => {
               </div>
             )}
 
-            <button className={`w-full py-3 rounded-md font-bold text-white text-lg ${side === 'Buy' ? 'bg-[#00B4D8] hover:bg-opacity-90 text-[#03045E]' : 'bg-[#ef5350] hover:bg-opacity-90'}`}>
-              {side === 'Buy' ? 'Buy BTC' : 'Sell BTC'}
+            {message && (
+              <div className={`text-sm text-center py-1 rounded ${message.includes('success') ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                {message}
+              </div>
+            )}
+
+            <button 
+              onClick={handlePlaceOrder}
+              disabled={isLoading}
+              className={`w-full py-3 rounded-md font-bold text-white text-lg ${side === 'Buy' ? 'bg-[#00B4D8] hover:bg-opacity-90 text-[#03045E]' : 'bg-[#ef5350] hover:bg-opacity-90'} disabled:opacity-50`}
+            >
+              {isLoading ? 'Processing...' : (side === 'Buy' ? 'Buy BTC' : 'Sell BTC')}
             </button>
           </div>
         </div>
