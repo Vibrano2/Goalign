@@ -1,0 +1,2213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goalign | Discover what your money is capable of</title>
+    <!-- Fonts: High-End Institutional Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome: Industry Standard Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <!-- Navbar -->
+    <nav id="main-nav">
+        <div class="container">
+            <a onclick="navigate('home')" class="logo">
+                <img src="assets/Goalign1.png" alt="Goalign Logo">
+            </a>
+            <div class="nav-links">
+                <a onclick="navigate('prices')" data-page="prices">Prices</a>
+                <a onclick="navigate('p2p')" data-page="p2p">P2P Market</a>
+                <a onclick="navigate('invest')" data-page="invest">Invest</a>
+                <a onclick="navigate('cards')" data-page="cards">Cards</a>
+            </div>
+            <div class="nav-actions">
+                <!-- Search Trigger -->
+                <button class="btn btn-ghost" id="search-trigger" onclick="toggleSearchPalette()" title="Search (Ctrl+K)" style="padding: 0.6rem;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+                <!-- Notifications Bell -->
+                <div style="position: relative;">
+                    <button class="btn btn-ghost" id="notif-btn" onclick="toggleNotifications()" style="padding: 0.6rem;">
+                        <i class="fa-solid fa-bell"></i>
+                        <span id="notif-badge" style="position: absolute; top: 4px; right: 4px; background: var(--color-accent-red); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 0.6rem; font-weight: 800; display: flex; align-items: center; justify-content: center; pointer-events: none;">4</span>
+                    </button>
+                    <!-- Notification Dropdown -->
+                    <div id="notif-panel" style="display: none; position: absolute; top: calc(100% + 12px); right: 0; width: 380px; background: var(--color-bg-card); border: 1px solid var(--color-border-bright); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); z-index: 999; overflow: hidden;">
+                        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 800; font-size: 1rem; font-family: var(--font-heading);">Notifications</span>
+                            <button onclick="markAllRead()" style="background: none; border: none; color: var(--color-accent-primary); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Mark all read</button>
+                        </div>
+                        <div id="notif-list" style="max-height: 380px; overflow-y: auto;"></div>
+                        <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); text-align: center;">
+                            <button onclick="toggleNotifications()" style="background: none; border: none; color: var(--color-text-secondary); font-size: 0.8rem; cursor: pointer;">Close</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost" onclick="openAuth('login')">Log In</button>
+                <button class="btn btn-primary" onclick="openAuth('signup')">Sign Up</button>
+            </div>
+        </div>
+    </nav>
+
+
+    <!-- Search Command Palette Overlay -->
+    <div id="search-palette" onclick="closeSearchPalette(event)" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 10000; align-items: flex-start; justify-content: center; padding-top: 15vh;">
+        <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; width: 100%; max-width: 600px; overflow: hidden; box-shadow: 0 40px 80px rgba(0,0,0,0.4);" onclick="event.stopPropagation()">
+            <div style="padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid var(--card-border);">
+                <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted); font-size: 1.1rem;"></i>
+                <input id="search-input" type="text" placeholder="Search pages, coins, features..." oninput="runSearch(this.value)" style="flex: 1; background: none; border: none; outline: none; font-size: 1rem; color: var(--text-main); font-family: var(--font-body);">
+                <kbd onclick="closeSearchPalette()" style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 6px; padding: 3px 8px; font-size: 0.7rem; cursor: pointer; color: var(--text-muted);">ESC</kbd>
+            </div>
+            <div id="search-results" style="max-height: 380px; overflow-y: auto; padding: 0.75rem;"></div>
+        </div>
+    </div>
+
+    <!-- Onboarding Wizard -->
+    <div id="onboarding-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); z-index: 10001; align-items: center; justify-content: center;">
+        <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 28px; width: 100%; max-width: 520px; padding: 3rem; text-align: center; box-shadow: 0 60px 100px rgba(0,0,0,0.4);">
+            <div id="onboarding-step-1">
+                <div style="font-size: 3.5rem; margin-bottom: 1.5rem;">👋</div>
+                <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 1rem;">Welcome to <span class="gradient-text">Goalign</span></h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem; line-height: 1.7;">The next-generation crypto platform — trade, invest, and grow your wealth with institutional-grade tools.</p>
+                <button class="btn btn-primary" onclick="onboardStep(2)" style="width: 100%; padding: 1rem; border-radius: 14px; font-size: 1rem; font-weight: 800;">Get Started <i class="fa-solid fa-arrow-right" style="margin-left: 0.5rem;"></i></button>
+                <button onclick="skipOnboarding()" style="margin-top: 1rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem;">Skip for now</button>
+            </div>
+            <div id="onboarding-step-2" style="display: none;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; text-align: left;">
+                    <div style="background: var(--bg-secondary); padding: 1.25rem; border-radius: 16px; border: 1px solid var(--card-border);">
+                        <i class="fa-solid fa-chart-line" style="font-size: 1.5rem; color: var(--accent-green); margin-bottom: 0.75rem; display: block;"></i>
+                        <div style="font-weight: 700; margin-bottom: 0.25rem;">P2P Exchange</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Trade with 16 global currencies, zero fees</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: 1.25rem; border-radius: 16px; border: 1px solid var(--card-border);">
+                        <i class="fa-solid fa-shield-halved" style="font-size: 1.5rem; color: #627EEA; margin-bottom: 0.75rem; display: block;"></i>
+                        <div style="font-weight: 700; margin-bottom: 0.25rem;">Escrow Protection</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Funds secured until trade completes</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: 1.25rem; border-radius: 16px; border: 1px solid var(--card-border);">
+                        <i class="fa-solid fa-sack-dollar" style="font-size: 1.5rem; color: var(--premium-gold); margin-bottom: 0.75rem; display: block;"></i>
+                        <div style="font-weight: 700; margin-bottom: 0.25rem;">VIP Portfolios</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Daily ROI up to 25% for top tiers</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: 1.25rem; border-radius: 16px; border: 1px solid var(--card-border);">
+                        <i class="fa-solid fa-robot" style="font-size: 1.5rem; color: #14F195; margin-bottom: 0.75rem; display: block;"></i>
+                        <div style="font-weight: 700; margin-bottom: 0.25rem;">AI Assistant</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">24/7 intelligent support chatbot</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="onboardStep(3)" style="width: 100%; padding: 1rem; border-radius: 14px; font-size: 1rem; font-weight: 800;">Continue <i class="fa-solid fa-arrow-right" style="margin-left: 0.5rem;"></i></button>
+            </div>
+            <div id="onboarding-step-3" style="display: none;">
+                <div style="font-size: 3.5rem; margin-bottom: 1.5rem;">🚀</div>
+                <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 1rem;">Ready to start trading?</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem; line-height: 1.7;">Create your account and make your first deposit to unlock all features.</p>
+                <button class="btn btn-primary" onclick="skipOnboarding(); toggleModal('auth')" style="width: 100%; padding: 1rem; border-radius: 14px; font-size: 1rem; font-weight: 800;">Create Account</button>
+                <button onclick="skipOnboarding(); navigate('p2p')" style="margin-top: 1rem; background: none; border: none; color: var(--accent-green); cursor: pointer; font-size: 0.9rem; font-weight: 700;">Explore P2P Market →</button>
+            </div>
+            <!-- Step Dots -->
+            <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
+                <div id="ob-dot-1" style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green);"></div>
+                <div id="ob-dot-2" style="width: 8px; height: 8px; border-radius: 50%; background: var(--card-border);"></div>
+                <div id="ob-dot-3" style="width: 8px; height: 8px; border-radius: 50%; background: var(--card-border);"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trust Badges & Institutional Compliance (Premium Enhancement) -->
+    <div class="container" style="margin-top: 4rem; opacity: 0.6; filter: grayscale(1); transition: all 0.3s;" onmouseover="this.style.opacity='1'; this.style.filter='grayscale(0)';" onmouseout="this.style.opacity='0.6'; this.style.filter='grayscale(1)';" id="trust-badges">
+        <div style="display: flex; justify-content: space-around; align-items: center; filter: invert(var(--is-dark));">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/FCA_logo.svg" alt="FCA" style="height: 25px;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b2/SEC_logo.svg" alt="SEC" style="height: 35px;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/15/FINRA_Logo.svg" alt="FINRA" style="height: 22px;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/d/d4/FDIC_logo.svg" alt="FDIC" style="height: 25px;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/SIPC_logo.svg" alt="SIPC" style="height: 30px;">
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="app-router">
+        <!-- Home Section -->
+        <section id="home" class="active">
+            <!-- Premium Hero Redesign -->
+            <div class="container" style="margin-top: 2rem;">
+                <div class="hero-premium-bg">
+                    <div class="hero-content-wrapper">
+                        <div class="hero-text">
+                            <div class="hero-tag reveal">V3.0 QUANTUM TRADING LIVE</div>
+                            <h1 class="hero-title-premium reveal delay-1">
+                                The Future of <br><span class="gradient-text">Institutional Growth</span>
+                            </h1>
+                            <p class="hero-subtitle-premium reveal delay-2">Experience lightning-fast execution and smart yield strategies powered by decentralized escrow protection.</p>
+                            <div class="hero-actions reveal delay-3">
+                                <button class="btn btn-primary btn-lg" onclick="openAuth('signup')"> Get Started <i class="fa-solid fa-arrow-right"></i></button>
+                                <button class="btn btn-ghost btn-lg" onclick="navigate('invest')" style="margin-left: 1rem;">View Plans</button>
+                            </div>
+                        </div>
+
+                        <!-- Floating Performance Card -->
+                        <div class="floating-card reveal delay-4">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                                <div style="font-weight: 800; font-size: 1.1rem; color: #FFFFFF; font-family: var(--font-heading);">Total Volume</div>
+                                <div style="padding: 0.35rem 0.75rem; background: var(--color-accent-primary-glow); color: var(--color-accent-primary); border-radius: 8px; font-size: 0.8rem; font-weight: 800; font-family: var(--font-mono);">+32.4%</div>
+                            </div>
+                            <div style="font-size: 2.2rem; font-weight: 800; color: #FFFFFF; margin-bottom: 0.5rem; font-family: var(--font-mono);">$284,509.12</div>
+                            <div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-bottom: 2rem;">Institutional Alpha Managed</div>
+                            
+                            <div style="height: 80px; width: 100%; display: flex; align-items: flex-end; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border);">
+                                <div style="flex:1; background: var(--color-accent-primary); opacity: 0.2; height: 40%; border-radius: 4px;"></div>
+                                <div style="flex:1; background: var(--color-accent-primary); opacity: 0.3; height: 65%; border-radius: 4px;"></div>
+                                <div style="flex:1; background: var(--color-accent-primary); opacity: 0.4; height: 50%; border-radius: 4px;"></div>
+                                <div style="flex:1; background: var(--color-accent-primary); opacity: 0.6; height: 85%; border-radius: 4px;"></div>
+                                <div style="flex:1; background: var(--color-accent-primary); height: 100%; border-radius: 4px; box-shadow: 0 0 15px var(--color-accent-primary-glow);"></div>
+                                <div style="flex:1; background: var(--color-accent-primary); opacity: 0.7; height: 90%; border-radius: 4px;"></div>
+                                <div style="flex:1; background: var(--color-accent-primary); opacity: 0.5; height: 75%; border-radius: 4px;"></div>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+                                <div style="display: flex;">
+                                    <img src="assets/premium_avatar.png" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--color-bg-surface); z-index: 3;" alt="User">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-accent-gold); border: 2px solid var(--color-bg-surface); z-index: 2; margin-left: -12px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; color: #000;">VIP</div>
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-bg-card-hover); border: 2px solid var(--color-bg-surface); z-index: 1; margin-left: -12px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--color-text-secondary);">+1k</div>
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 700; letter-spacing: 0.05em;">ACTIVE NOW: 1.2M+</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- News Ticker -->
+            <div class="container" style="margin-top: 1.5rem; margin-bottom: 3rem;">
+                <div style="display: flex; align-items: center; background: var(--color-bg-surface); padding: 0.75rem 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); gap: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; color: var(--color-accent-gold); font-weight: 800; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; flex-shrink: 0;">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Live Bulletin</span>
+                    </div>
+                    <div class="ticker-wrap" style="flex: 1; padding: 0; border: none; background: transparent; overflow: hidden;">
+                        <div class="ticker" style="animation-duration: 30s;">
+                            <div class="ticker-item" style="color: var(--color-text-secondary); font-size: 0.9rem; font-weight: 500;">[System] Welcome to Goalign! Invite friends to get up to 10% commission rewards.</div>
+                            <div class="ticker-item" style="color: var(--color-text-secondary); font-size: 0.9rem; font-weight: 500;">[Notice] Join our official Telegram group to get the latest investment signals.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Grid -->
+            <div class="container">
+                <div class="quick-action-grid reveal delay-5">
+                    <div class="quick-action-card" onclick="navigate('p2p')">
+                        <div class="icon-wrap" style="background: rgba(0, 230, 118, 0.1); color: var(--color-accent-primary);">
+                            <i class="fa-solid fa-plus"></i>
+                        </div>
+                        <span>Recharge</span>
+                    </div>
+                    <div class="quick-action-card" onclick="initiateWithdrawal()">
+                        <div class="icon-wrap" style="background: rgba(255, 77, 106, 0.1); color: var(--color-accent-red);">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </div>
+                        <span>Withdraw</span>
+                    </div>
+                    <div class="quick-action-card" onclick="navigate('transfer')">
+                        <div class="icon-wrap" style="background: rgba(240, 180, 41, 0.1); color: var(--color-accent-gold);">
+                            <i class="fa-solid fa-right-left"></i>
+                        </div>
+                        <span>Transfer</span>
+                    </div>
+                    <div class="quick-action-card" onclick="navigate('invest'); setTimeout(() => updatePlanFilter(document.querySelector('.filter-tab:last-child'), 'vip'), 50);">
+                        <div class="icon-wrap" style="background: linear-gradient(135deg, #f0b429, #f9cb28); color: #000;">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <span>VIP Plans</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Market Data (Institutional Tabs) -->
+            <div class="container card-reveal" style="margin-bottom: 3.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+                    <h3 class="premium-heading">Market <span class="gradient-text">Overview</span></h3>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--color-accent-primary); cursor: pointer;" onclick="navigate('prices')">View All Markets →</div>
+                </div>
+                
+                <div class="filter-tabs" style="gap: 0.5rem;">
+                    <div class="filter-tab active" onclick="switchMarketTab(this, 'BINANCE')">BINANCE</div>
+                    <div class="filter-tab" onclick="switchMarketTab(this, 'OKX')">OKX</div>
+                    <div class="filter-tab" onclick="switchMarketTab(this, 'HUOBI')">HUOBI</div>
+                    <div class="filter-tab" onclick="switchMarketTab(this, 'COINBASE')">COINBASE</div>
+                </div>
+
+                <div class="market-list" id="home-market-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Market list items injected by JS -->
+                </div>
+            </div>
+
+            <!-- Live Activity Feed -->
+            <div class="container card-reveal" style="margin-bottom: 6rem;">
+                <h3 class="premium-heading" style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 4px; height: 16px; background: var(--color-accent-primary); border-radius: 2px;"></div> Live Network Activity
+                </h3>
+                <div style="height: 250px; overflow: hidden; position: relative; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--card-border); padding: 1rem;">
+                    <div class="activity-feed" id="home-activity-feed" style="position: absolute; width: calc(100% - 2rem); display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Scrolling items injected by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- News Feed Section -->
+            <div class="container card-reveal" style="margin-bottom: 6rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+                    <h3 class="premium-heading">Global <span class="gradient-text">News</span></h3>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--color-accent-primary); cursor: pointer;">Live Updates →</div>
+                </div>
+                <div id="news-feed" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- News injected by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Other sections will be added here -->
+        <!-- High-Density Prices Section -->
+        <section id="prices">
+            <div class="container card-reveal" style="padding-top: 6rem;">
+                <div class="prices-header" style="align-items: center; margin-bottom: 3.5rem;">
+                    <div style="flex: 1;">
+                        <span class="badge-premium">Live Markets</span>
+                        <h1 class="premium-heading" style="font-size: clamp(2.5rem, 4vw, 3.5rem); margin-bottom: 0.5rem;">Market <span class="gradient-text">Trends</span></h1>
+                        <p style="color: var(--color-text-secondary); font-size: 1rem; font-weight: 500;">Real-time performance across elite global exchanges.</p>
+                    </div>
+                    <div class="search-bar" style="width: 320px;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input type="text" placeholder="Search markets (BTC, ETH, SOL...)" id="coin-search">
+                    </div>
+                </div>
+                
+                <div class="filter-tabs" style="margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                    <div class="filter-tab active" onclick="setPriceFilter('all', this)">All Markets</div>
+                    <div class="filter-tab" onclick="setPriceFilter('watchlist', this)">⭐ Watchlist</div>
+                    <div class="filter-tab">Top Gainers</div>
+                    <div class="filter-tab">Institutional DeFi</div>
+                    <div class="filter-tab">Stablecoins</div>
+                    <div class="filter-tab">Layer 1/2</div>
+                    <button class="btn btn-ghost btn-sm" onclick="toggleYieldCalc()" style="margin-left: auto; font-size: 0.8rem; padding: 0.4rem 0.9rem;">💰 Yield Calc</button>
+                    <button class="btn btn-primary btn-sm" onclick="show2FA(() => togglePostTrade())" style="font-size: 0.8rem; padding: 0.4rem 0.9rem;">📢 Post Ad</button>
+                </div>
+
+                <div class="price-table-wrap">
+                    <table id="prices-table">
+                        <thead>
+                            <tr>
+                                <th width="50"></th>
+                                <th>Name</th>
+                                <th class="text-right">Price</th>
+                                <th class="text-right">24h%</th>
+                                <th class="text-right">7d%</th>
+                                <th class="text-right">Market Cap</th>
+                                <th class="text-center">Last 7 Days</th>
+                                <th class="text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prices-body">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        <!-- Crypto Product Section -->
+        <section id="crypto">
+            <div class="container card-reveal">
+                <div class="product-hero">
+                    <div>
+                        <h1 style="font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 1.5rem;">The future of <span
+                                class="gradient-text">money</span> is here.</h1>
+                        <p style="color: var(--text-muted); font-size: 1.2rem; margin-bottom: 2rem;">Access the world's
+                            most popular digital assets with ease. Buy, sell, and earn on Bitcoin, Ethereum, and 100+
+                            more crypto assets.</p>
+                        <div style="display: flex; gap: 2rem; margin-top: 3rem;">
+                            <div>
+                                <h4 style="color: var(--accent-green); font-size: 1.5rem;">$10</h4>
+                                <p style="font-size: 0.9rem; color: var(--text-muted);">Min. deposit</p>
+                            </div>
+                            <div style="width: 1px; background: var(--card-border);"></div>
+                            <div>
+                                <h4 style="color: var(--accent-green); font-size: 1.5rem;">Zero</h4>
+                                <p style="font-size: 0.9rem; color: var(--text-muted);">Trading fees*</p>
+                            </div>
+                            <div style="width: 1px; background: var(--card-border);"></div>
+                            <div>
+                                <h4 style="color: var(--accent-green); font-size: 1.5rem;">24/7</h4>
+                                <p style="font-size: 0.9rem; color: var(--text-muted);">Liquidity</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="buy-widget" id="exchange-widget">
+                        <div style="position: absolute; top: 0; right: 0; bottom: 0; width: 42%; overflow: hidden; border-radius: 0 var(--card-radius) var(--card-radius) 0; opacity: 0.12; pointer-events: none;">
+                            <img src="assets/Blockchain.png" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h3 style="margin: 0;">Exchange</h3>
+                            <div style="font-size: 0.8rem; color: var(--accent-green); cursor: pointer;"
+                                onclick="swapAssets()">⇄ Swap</div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>From</label>
+                            <div class="input-wrap">
+                                <input type="number" value="100" id="exchange-from-amount"
+                                    oninput="updateExchangeRate()">
+                                <select id="exchange-from-asset" onchange="updateExchangeRate()"
+                                    style="background: transparent; border: none; color: var(--text-main); font-weight: 600; outline: none; cursor: pointer;">
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="BTC">BTC</option>
+                                    <option value="ETH">ETH</option>
+                                    <option value="SOL">SOL</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center; margin: -0.5rem 0; position: relative; z-index: 1;">
+                            <div
+                                style="background: var(--bg-secondary); display: inline-block; padding: 0.2rem; border-radius: 50%; border: 1px solid var(--card-border);">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>To</label>
+                            <div class="input-wrap">
+                                <input type="text" value="0.00155" readonly id="exchange-to-amount">
+                                <select id="exchange-to-asset" onchange="updateExchangeRate()"
+                                    style="background: transparent; border: none; color: var(--text-main); font-weight: 600; outline: none; cursor: pointer;">
+                                    <option value="BTC">BTC</option>
+                                    <option value="ETH">ETH</option>
+                                    <option value="SOL">SOL</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div
+                            style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                            <span>Est. Rate</span>
+                            <span id="exchange-rate-display">1 BTC ≈ 64,231.50 USD</span>
+                        </div>
+
+                        <button class="btn btn-primary" style="width: 100%; padding: 1rem;"
+                            onclick="processExchange()">Confirm Exchange</button>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; margin: 4rem 0;">
+                    <div class="stat-card">
+                        <h4>Local Deposits</h4>
+                        <p>Bank transfers & cash</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Secure Custody</h4>
+                        <p>Licensed & Regulated</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Instant Swap</h4>
+                        <p>No waiting for orders</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Alerts</h4>
+                        <p>Price drop notifications</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stocks Section -->
+        <section id="stocks">
+            <div class="container card-reveal">
+                <div class="product-hero">
+                    <div>
+                        <h1 style="font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 1.5rem;">Global <span
+                                class="gradient-text">Equities</span> at your fingertips.</h1>
+                        <p style="color: var(--text-muted); font-size: 1.2rem; margin-bottom: 2rem;">Invest in the
+                            world's most valuable companies. Fractional shares mean you can own AAPL, TSLA, or NVDA for
+                            as little as $1.</p>
+                        <div class="ticker-wrap" style="background: transparent; padding: 1rem 0; border: none;">
+                            <div class="ticker">
+                                <div class="ticker-item"><span class="symbol">AAPL</span><span
+                                        class="price">$192.53</span><span class="change up">+1.2%</span></div>
+                                <div class="ticker-item"><span class="symbol">TSLA</span><span
+                                        class="price">$175.22</span><span class="change down">-4.5%</span></div>
+                                <div class="ticker-item"><span class="symbol">NVDA</span><span
+                                        class="price">$892.10</span><span class="change up">+6.1%</span></div>
+                                <div class="ticker-item"><span class="symbol">MSFT</span><span
+                                        class="price">$415.60</span><span class="change up">+0.8%</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="padding: 3rem; border: 1px solid var(--accent-green); position: relative; overflow: hidden;">
+                        <h2 style="margin-bottom: 1rem;">SEC & SIPC <br><span class="gradient-text">Protected</span>
+                        </h2>
+                        <p style="margin-bottom: 2rem;">Your investments are insured up to $500,000 for securities and
+                            $250,000 for cash.</p>
+                        <div style="position: absolute; inset: 0; opacity: 0.07; pointer-events: none;">
+                            <img src="assets/dark_hero_bg.png" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <button class="btn btn-primary" style="width: 100%; position: relative;" onclick="navigate('prices')">Browse
+                            Stocks</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Earn Section -->
+        <section id="earn">
+            <div class="container card-reveal" style="padding-top: 4rem;">
+                <div style="text-align: center; margin-bottom: 4rem;">
+                    <h1 style="font-size: 3.5rem; margin-bottom: 1rem;">Put your assets to <span
+                            class="gradient-text">work</span>.</h1>
+                    <p style="color: var(--text-muted); font-size: 1.25rem;">Earn weekly yield automatically on your
+                        crypto holdings with Goalign Earn.</p>
+                </div>
+
+                <div class="feature-grid">
+                    <div class="yield-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                            <img src="assets/yield_growth_premium.png" alt="ATOM Cosmos" style="width: 60px; height: 60px; object-fit: contain;">
+                            <span class="apy-badge">10.5% APY</span>
+                        </div>
+                        <h3>Cosmos (ATOM)</h3>
+                        <p style="margin-bottom: 1.5rem; color: var(--text-muted);">Payouts every Monday. No lock-up
+                            period.</p>
+                        <div
+                            style="background: rgba(0,0,0,0.05); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 2rem;">
+                            <div style="background: var(--accent-green); width: 85%; height: 100%;"></div>
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="navigate('invest')">Start Earning</button>
+                    </div>
+                    <div class="yield-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                            <img src="assets/yield_growth_premium.png" alt="Solana SOL" style="width: 60px; height: 60px; object-fit: contain; filter: hue-rotate(55deg) saturate(1.3);">
+                            <span class="apy-badge">6.1% APY</span>
+                        </div>
+                        <h3>Solana (SOL)</h3>
+                        <p style="margin-bottom: 1.5rem; color: var(--text-muted);">Staking rewards distributed weekly.
+                        </p>
+                        <div
+                            style="background: rgba(0,0,0,0.05); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 2rem;">
+                            <div style="background: var(--accent-green); width: 62%; height: 100%;"></div>
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="navigate('invest')">Start Earning</button>
+                    </div>
+                    <div class="yield-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                            <img src="assets/yield_illustration.png" alt="USDC Stablecoin" style="width: 60px; height: 60px; object-fit: contain; filter: hue-rotate(210deg) saturate(1.5);">
+                            <span class="apy-badge">4.0% APY</span>
+                        </div>
+                        <h3>USDC</h3>
+                        <p style="margin-bottom: 1.5rem; color: var(--text-muted);">Stable yield on your dollar value
+                            assets.</p>
+                        <div
+                            style="background: rgba(0,0,0,0.05); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 2rem;">
+                            <div style="background: var(--accent-green); width: 40%; height: 100%;"></div>
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="navigate('invest')">Start Earning</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Transfer Section -->
+        <section id="transfer">
+            <div class="container card-reveal" style="padding: 6rem 0;">
+                <div class="wizard-container" style="max-width: 500px; margin: 0 auto; background: var(--color-bg-card); padding: 3rem; border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: 0 40px 80px rgba(0,0,0,0.3); backdrop-filter: blur(10px);">
+                    <div class="step-indicator" style="display: flex; justify-content: space-between; margin-bottom: 3.5rem; position: relative;">
+                        <div style="position: absolute; top: 15px; left: 0; right: 0; height: 1.5px; background: var(--card-border); z-index: 1;"></div>
+                        <div class="step-dot active" id="transfer-dot-1" style="width: 32px; height: 32px; background: var(--bg-primary); border: 2.5px solid var(--accent-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 2; position: relative; color: var(--accent-green); font-size: 0.9rem; transition: all 0.4s;">1</div>
+                        <div class="step-dot" id="transfer-dot-2" style="width: 32px; height: 32px; background: var(--bg-primary); border: 2.5px solid var(--card-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 2; position: relative; color: var(--text-muted); font-size: 0.9rem; transition: all 0.4s;">2</div>
+                        <div class="step-dot" id="transfer-dot-3" style="width: 32px; height: 32px; background: var(--bg-primary); border: 2.5px solid var(--card-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 2; position: relative; color: var(--text-muted); font-size: 0.9rem; transition: all 0.4s;">3</div>
+                        <div class="step-dot" id="transfer-dot-4" style="width: 32px; height: 32px; background: var(--bg-primary); border: 2.5px solid var(--card-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 2; position: relative; color: var(--text-muted); font-size: 0.9rem; transition: all 0.4s;">4</div>
+                    </div>
+
+                    <!-- Step 1: Amount & Asset -->
+                    <div id="transfer-step-1">
+                        <h2 style="font-size: 1.8rem; margin-bottom: 0.4rem; font-weight: 700; letter-spacing: -0.02em;">Transfer Amount</h2>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2.5rem; font-weight: 500;">Securely move assets within the consensus network.</p>
+                        
+                        <div class="input-group" style="margin-bottom: 2.5rem;">
+                            <div class="input-wrap" style="display: flex; align-items: center; background: var(--bg-primary); border: 1.5px solid var(--card-border); border-radius: 16px; padding: 0.75rem 1.2rem; transition: border-color 0.3s;">
+                                <input type="number" id="transfer-amount" placeholder="0.00" style="flex: 1; background: transparent; border: none; padding: 0.6rem 0; color: var(--text-main); font-size: 1.4rem; outline: none; font-weight: 700; letter-spacing: -0.01em;">
+                                <span style="font-weight: 800; color: var(--accent-green); font-size: 0.9rem; letter-spacing: 0.05em;">USDT</span>
+                            </div>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem; display: flex; justify-content: space-between; font-weight: 500;">
+                                <span>Network Balance: <span id="transfer-balance-display" style="color: var(--text-main); font-weight: 700;">15,420.50</span> USDT</span>
+                                <span onclick="document.getElementById('transfer-amount').value = 15420.50" style="color: var(--accent-green); cursor: pointer; font-weight: 800; text-transform: uppercase; font-size: 0.7rem;">Use Max</span>
+                            </p>
+                        </div>
+                        
+                        <button class="btn btn-primary btn-block btn-lg" onclick="nextStep('transfer', 2)">Continue <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+                    </div>
+
+                    <!-- Step 2: Recipient -->
+                    <div id="transfer-step-2" style="display: none;">
+                        <h2 style="font-size: 1.8rem; margin-bottom: 0.4rem; font-weight: 700; letter-spacing: -0.02em;">Target Recipient</h2>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2.5rem; font-weight: 500;">Enter the verified UID or username of the peer.</p>
+                        
+                        <div class="input-group" style="margin-bottom: 2.5rem;">
+                            <div class="input-wrap" style="background: var(--bg-primary); border: 1.5px solid var(--card-border); border-radius: 16px; padding: 0.75rem 1.2rem;">
+                                <input type="text" id="transfer-recipient" placeholder="Recipient UID / Username" style="width: 100%; background: transparent; border: none; padding: 0.8rem 0; color: var(--text-main); outline: none; font-weight: 600; font-size: 1rem;">
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1rem;">
+                            <button class="btn btn-ghost" style="flex: 1; padding: 1.1rem;" onclick="nextStep('transfer', 1)">Back</button>
+                            <button class="btn btn-primary" style="flex: 1; padding: 1.1rem;" onclick="nextStep('transfer', 3)">Review Transfer</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Review & Security -->
+                    <div id="transfer-step-3" style="display: none;">
+                        <h2 style="font-size: 1.8rem; margin-bottom: 0.4rem; font-weight: 700; letter-spacing: -0.02em;">Security Review</h2>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2rem; font-weight: 500;">Please verify the transaction details carefully.</p>
+                        
+                        <div style="background: var(--bg-primary); padding: 1.75rem; border-radius: 20px; border: 1px solid var(--card-border); margin-bottom: 2rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 1.25rem;">
+                                <span style="color: var(--text-muted); font-weight: 500;">Net Amount</span>
+                                <span id="review-amount" style="font-weight: 800; font-size: 1.1rem; color: var(--text-main);">0.00 USDT</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 1.25rem;">
+                                <span style="color: var(--text-muted); font-weight: 500;">Peer Recipient</span>
+                                <span id="review-recipient" style="font-weight: 700; color: var(--accent-green);">---</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding-top: 1.25rem; border-top: 1px dashed var(--card-border);">
+                                <span style="color: var(--text-muted); font-weight: 500;">Network Fee</span>
+                                <span style="color: var(--accent-green); font-weight: 800; font-size: 0.9rem;">0.00 USDT</span>
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 2.5rem;">
+                            <label style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 0.75rem; display: block; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Safe Password</label>
+                            <input type="password" id="transfer-safe-password" placeholder="••••••••" style="width: 100%; background: var(--bg-primary); border: 1.5px solid var(--card-border); border-radius: 16px; padding: 1rem; color: var(--text-main); outline: none; font-size: 1.2rem; letter-spacing: 0.2rem;">
+                        </div>
+                        
+                        <div style="display: flex; gap: 1.25rem;">
+                            <button class="btn btn-ghost" style="flex: 1; padding: 1.1rem;" onclick="nextStep('transfer', 2)">Back</button>
+                            <button class="btn btn-primary" style="flex: 1; padding: 1.1rem;" onclick="processTransfer()">Authorize</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Success -->
+                    <div id="transfer-step-4" style="display: none; text-align: center; animation: checkIn 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;">
+                        <div style="width: 100px; height: 100px; background: rgba(52, 199, 89, 0.1); color: var(--accent-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2.5rem; position: relative; box-shadow: 0 10px 30px rgba(52, 199, 89, 0.2);">
+                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" style="filter: drop-shadow(0 4px 8px rgba(52, 199, 89, 0.3));"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                        <h2 style="font-size: 2rem; margin-bottom: 0.5rem; font-weight: 800; letter-spacing: -0.03em;">Transfer Secured</h2>
+                        <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 3rem; font-weight: 500; line-height: 1.5;">Assets successfully dispatched to the blockchain node.</p>
+                        <button class="btn btn-primary" style="width: 100%; padding: 1.25rem; font-size: 1.1rem;" onclick="navigate('home')">Great, Thanks</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alpha Trading Section -->
+        <section id="alpha">
+            <div class="container" style="max-width: 1400px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="display: flex; gap: 2rem; align-items: center;">
+                        <h2 style="font-size: 1.5rem;">BTC / USD</h2>
+                        <div style="color: var(--accent-green);"><span
+                                style="font-size: 0.8rem; color: var(--text-muted);">Price</span><br><b>$64,231.50</b>
+                        </div>
+                        <div style="color: var(--accent-green);"><span
+                                style="font-size: 0.8rem; color: var(--text-muted);">24h Change</span><br><b>+2.45%</b>
+                        </div>
+                    </div>
+                    <div class="filter-tabs">
+                        <div class="filter-tab active">BTC</div>
+                        <div class="filter-tab">ETH</div>
+                        <div class="filter-tab">SOL</div>
+                    </div>
+                </div>
+
+                <div class="alpha-grid">
+                    <div class="alpha-panel">
+                        <div style="flex: 1; min-height: 0; position: relative;">
+                            <canvas id="alpha-chart" style="width: 100%; height: 100%;"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="alpha-panel" style="border-left: 1px solid var(--card-border);">
+                        <h4>Order Book</h4>
+                        <div
+                            style="display: grid; grid-template-columns: 1fr 1fr 1fr; font-size: 0.7rem; color: var(--text-muted); margin: 1rem 0 0.5rem;">
+                            <span>Price (USD)</span><span class="text-right">Size (BTC)</span><span
+                                class="text-right">Total</span>
+                        </div>
+                        <div id="order-book-asks" style="display: flex; flex-direction: column-reverse;"></div>
+                        <div
+                            style="padding: 1rem 0; text-align: center; border-top: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border); margin: 0.5rem 0;">
+                            <h3 style="color: var(--accent-green);">$64,231.50</h3>
+                        </div>
+                        <div id="order-book-bids"></div>
+                        <!-- Depth Chart -->
+                        <div style="margin-top: 1rem; border-top: 1px solid var(--card-border); padding-top: 0.75rem;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
+                                <span style="font-size:0.7rem;color:var(--text-muted);font-weight:700;">MARKET DEPTH</span>
+                                <span style="font-size:0.7rem;"><span style="color:#00A86B;">Bids</span> / <span style="color:#ff3e3e;">Asks</span></span>
+                            </div>
+                            <canvas id="depth-chart" style="width:100%;height:120px;"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="alpha-panel" style="border-left: 1px solid var(--card-border);">
+                        <div class="filter-tabs" style="margin-bottom: 1.5rem;">
+                            <div class="filter-tab active" style="flex: 1; text-align: center;">Buy</div>
+                            <div class="filter-tab" style="flex: 1; text-align: center;">Sell</div>
+                        </div>
+                        <div class="input-group"><label>Order Type</label>
+                            <div class="input-wrap"><select
+                                    style="background: transparent; color: white; border: none; width: 100%; padding: 1rem 0; outline: none;">
+                                    <option>Market</option>
+                                    <option>Limit</option>
+                                </select></div>
+                        </div>
+                        <div class="input-group"><label>Amount</label>
+                            <div class="input-wrap"><input type="number" value="0.01"><span
+                                    style="color: var(--text-muted);">BTC</span></div>
+                        </div>
+                        <div style="margin-top: auto;">
+                            <div
+                                style="display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 0.9rem;">
+                                <span>Fee (0.1%)</span><span>$0.64</span></div>
+                            <button class="btn btn-primary btn-block">Buy BTC</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Portfolio Section -->
+        <section id="portfolio">
+            <div class="container card-reveal" style="padding-top: 4rem;">
+                <div class="stat-card"
+                    style="text-align: left; padding: 3rem; margin-bottom: 2rem; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg);">
+                    <p style="color: var(--text-muted); margin-bottom: 0.5rem;">Total Balance</p>
+                    <h1 style="font-size: 3.5rem;">$24,831.50 <span
+                            style="font-size: 1rem; color: var(--accent-green);">+4.2% today</span></h1>
+                </div>
+
+                <div class="portfolio-grid">
+                    <div class="stat-card" style="display: flex; flex-direction: column; align-items: center;">
+                        <div style="position: relative; padding: 2rem; background: rgba(255,255,255,0.02); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
+                            <img src="assets/portfolio_premium_viz.png" style="position: absolute; top:0; right:0; width: 120px; opacity: 0.3; pointer-events: none;">
+                            <h3 style="margin-bottom: 2rem;">Asset Allocation</h3>
+                            <canvas id="allocation-chart" width="250" height="250"></canvas>
+                        </div>
+                        <div style="width: 100%; margin-top: 2rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Bitcoin</span><span>65%</span></div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Ethereum</span><span>25%</span></div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Stablecoins</span><span>10%</span></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h3 style="margin-bottom: 2rem;">Performance</h3>
+                        <canvas id="performance-chart" height="300" style="width: 100%;"></canvas>
+                    </div>
+                </div>
+
+                <!-- Portfolio Balance History Chart -->
+                <div class="stat-card" style="margin-top: 2rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                        <h3 style="margin:0;">Balance History</h3>
+                        <button class="btn btn-ghost btn-sm" style="font-size:0.8rem;" onclick="exportTransactionsCSV()">📥 Export CSV</button>
+                    </div>
+                    <canvas id="balance-history-chart" style="width:100%;height:200px;"></canvas>
+                </div>
+
+                <div class="stat-card" style="margin-top: 2rem;">
+                    <h3 style="margin-bottom: 1.5rem;">Recent Activity</h3>
+                    <div id="recent-activity-body">
+                        <!-- Activity items injected by JS -->
+                    </div>
+                    <button class="btn btn-ghost btn-block">View Full History</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fees Section -->
+        <section id="fees">
+            <div class="container" style="padding-top: 4rem;">
+                <h1 style="margin-bottom: 2rem;">Trading <span class="gradient-text">Fees</span></h1>
+                <div class="filter-tabs" style="margin-bottom: 2rem;">
+                    <div class="filter-tab active">MXN</div>
+                    <div class="filter-tab">USDC</div>
+                    <div class="filter-tab">BTC</div>
+                    <div class="filter-tab">BRL</div>
+                </div>
+                <div class="price-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>30-day Volume (USD)</th>
+                                <th>Maker Fee</th>
+                                <th>Taker Fee</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>$0 - $50,000</td>
+                                <td>0.50%</td>
+                                <td>0.65%</td>
+                            </tr>
+                            <tr style="background: rgba(0,0,0,0.02);">
+                                <td>$50,001 - $100,000</td>
+                                <td>0.45%</td>
+                                <td>0.60%</td>
+                            </tr>
+                            <tr>
+                                <td>$100,001 - $500,000</td>
+                                <td>0.40%</td>
+                                <td>0.55%</td>
+                            </tr>
+                            <tr style="background: rgba(0,0,0,0.02);">
+                                <td>$500,001 - $1M+</td>
+                                <td>0.30%</td>
+                                <td>0.45%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mine / Profile Section -->
+        <section id="security">
+            <div class="container card-reveal" style="padding: 2rem 0;">
+                <!-- User Header -->
+                <div style="background: var(--color-bg-card); padding: 2.5rem; border-radius: var(--radius-lg); border: 1px solid var(--color-border); margin-bottom: 2rem; display: flex; align-items: center; gap: 2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+                    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, var(--premium-gold), #B87333); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white; font-weight: 800; border: 4px solid rgba(255,255,255,0.1); box-shadow: 0 8px 16px rgba(235, 169, 107, 0.3);">A</div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem;">
+                            <h2 style="font-size: 1.5rem; font-weight: 700;">Alex River</h2>
+                            <div class="vip-badge-icon vip-v2" id="welcome-vip-level" style="font-size: 0.65rem; padding: 0.15rem 0.6rem; border-radius: 100px;">VIP 0</div>
+                        </div>
+                        <p id="mine-vip-level" style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">UID: 10482937 • <span style="color: var(--accent-green);">Verified Account</span></p>
+                    </div>
+                </div>
+
+                <!-- Financial Summary Cards -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                    <div class="stat-card" style="padding: 1.5rem; background: var(--bg-secondary);">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Total Assets (USDT)</p>
+                        <h3 id="mine-total-assets" style="font-size: 1.5rem;">15,420.50</h3>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; background: var(--bg-secondary);">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Today's Earnings</p>
+                        <h3 style="font-size: 1.5rem; color: var(--accent-green);">+142.50</h3>
+                    </div>
+                </div>
+
+                <!-- Tools Grid -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; background: var(--bg-secondary); padding: 2.5rem; border-radius: var(--card-radius); border: 1px solid var(--card-border); box-shadow: var(--card-shadow);">
+                    <div class="quick-action-btn" onclick="navigate('p2p')" style="margin: 0;">
+                        <div class="icon-wrap" style="background: rgba(0, 122, 255, 0.1); color: #007AFF;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        </div>
+                        <span style="font-size: 0.8rem; font-weight: 700;">Recharge</span>
+                    </div>
+                    <div class="quick-action-btn" onclick="initiateWithdrawal()" style="margin: 0;">
+                        <div class="icon-wrap" style="background: rgba(255, 153, 0, 0.1); color: #FF9900;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
+                        </div>
+                        <span style="font-size: 0.8rem; font-weight: 700;">Withdraw</span>
+                    </div>
+                    <div class="quick-action-btn" onclick="navigate('transfer')" style="margin: 0;">
+                        <div class="icon-wrap" style="background: rgba(52, 199, 89, 0.1); color: #34C759;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 1l4 4-4 4M7 23l-4-4 4-4M21 13H11M3 11h10"/></svg>
+                        </div>
+                        <span style="font-size: 0.8rem; font-weight: 700;">Transfer</span>
+                    </div>
+                    <div class="quick-action-btn" onclick="navigate('invest')" style="margin: 0;">
+                        <div class="icon-wrap" style="background: rgba(175, 82, 222, 0.1); color: #AF52DE;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        </div>
+                        <span style="font-size: 0.8rem; font-weight: 700;">VIP</span>
+                    </div>
+                </div>
+
+                <!-- Account Links List -->
+                <div style="background: var(--bg-secondary); border-radius: 20px; border: 1px solid var(--card-border); overflow: hidden;">
+                    <div class="mine-link-item" onclick="navigate('portfolio')" style="display: flex; justify-content: space-between; align-items: center; padding: 1.2rem; border-bottom: 1px solid var(--card-border); cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #007AFF;"><path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                            <span>Portfolio History</span>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                    <div class="mine-link-item" onclick="showToast('Security', 'Security settings loading...')" style="display: flex; justify-content: space-between; align-items: center; padding: 1.2rem; border-bottom: 1px solid var(--card-border); cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #FF3B30;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <span>Security Center</span>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                    <div class="mine-link-item" onclick="navigate('help')" style="display: flex; justify-content: space-between; align-items: center; padding: 1.2rem; cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #34C759;"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"></path></svg>
+                            <span>Help Center</span>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                </div>
+
+                <!-- Active Sessions -->
+                <div style="margin-top: 2rem; background: var(--bg-secondary); padding: 2rem; border-radius: 16px; border: 1px solid var(--card-border);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                        <h4 style="font-size:1rem; font-weight:800;">🖥️ Active Sessions</h4>
+                        <span style="font-size:0.75rem;color:var(--text-muted);">3 devices</span>
+                    </div>
+                    <div id="sessions-list"></div>
+                </div>
+
+                <!-- Referral System -->
+                <div id="referral-section" style="margin-top: 1.5rem;"></div>
+
+                <button class="btn btn-ghost" style="width: 100%; margin-top: 2rem; color: #FF3B30; border-color: rgba(255, 59, 48, 0.2);" onclick="location.reload()">Sign Out</button>
+            </div>
+        </section>
+        <!-- Cards Section -->
+        <section id="cards">
+            <div class="container" style="padding: 6rem 0; text-align: center;">
+                <h1 style="font-size: 3.5rem; margin-bottom: 1rem;">The Only Card <span class="gradient-text">You
+                        Need</span>.</h1>
+                <p style="color: var(--text-muted);">Physical & Virtual cards with up to 5% crypto back.</p>
+
+                <div class="card-preview-wrap" style="display: flex; flex-direction: column; align-items: center;">
+                    <div id="main-debit-card" class="debit-card black">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <span style="font-weight: 700; font-size: 1.2rem; letter-spacing: 2px;">GOALIGN</span>
+                            <div style="width: 40px; height: 30px; background: rgba(0,0,0,0.2); border-radius: 5px;">
+                            </div>
+                        </div>
+                        <div style="font-size: 1.2rem; letter-spacing: 4px; margin: 1rem 0;">**** **** **** 8842</div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <div>
+                                <div style="font-size: 0.6rem; opacity: 0.6;">CARD HOLDER</div>
+                                <div style="font-weight: 500;">ALEX RIVER</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.6rem; opacity: 0.6;">EXPIRES</div>
+                                <div style="font-weight: 500;">12/28</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1.5rem; margin-top: 2rem;">
+                        <div class="color-dot black active" data-color="black" onclick="setCardColor('black', this)"
+                            style="background: #111;"></div>
+                        <div class="color-dot silver" data-color="silver" onclick="setCardColor('silver', this)"
+                            style="background: #e0e0e0;"></div>
+                        <div class="color-dot indigo" data-color="indigo" onclick="setCardColor('indigo', this)"
+                            style="background: #5b3eff;"></div>
+                    </div>
+                </div>
+
+                <div class="feature-grid" style="margin-top: 4rem;">
+                    <div class="stat-card">
+                        <h3>5%</h3>
+                        <p>Bitcoin rewards</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>$0</h3>
+                        <p>Monthly fees</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Global</h3>
+                        <p>ATM withdrawals</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Help Center Section -->
+        <section id="help">
+            <div class="container" style="padding: 6rem 0;">
+                <div style="text-align: center; margin-bottom: 4rem;">
+                    <h1 style="font-size: 3rem; margin-bottom: 1.5rem;">How can we <span
+                            class="gradient-text">help?</span></h1>
+                    <div style="max-width: 600px; margin: 0 auto; position: relative;">
+                        <input type="text" id="faq-search" placeholder="Search for topics, features, or guides..."
+                            style="width: 100%; padding: 1.2rem 1.5rem; background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 12px; color: #fff;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 300px; gap: 4rem;">
+                    <div id="faq-list">
+                        <div class="faq-item" onclick="toggleFaq(this)">
+                            <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                                <span>How do I verify my account?</span>
+                                <span>+</span>
+                            </div>
+                            <div class="faq-answer">Verification requires a government-issued ID and a live selfie. Most
+                                accounts are verified within 10 minutes.</div>
+                        </div>
+                        <div class="faq-item" onclick="toggleFaq(this)">
+                            <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                                <span>What are the withdrawal limits?</span>
+                                <span>+</span>
+                            </div>
+                            <div class="faq-answer">Limits depend on your verification tier. Tier 1 allows up to $5,000
+                                daily, while Tier 3 has no set limits.</div>
+                        </div>
+                        <div class="faq-item" onclick="toggleFaq(this)">
+                            <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                                <span>Is my crypto insured?</span>
+                                <span>+</span>
+                            </div>
+                            <div class="faq-answer">Yes, 98% of assets are held in cold storage, and we carry
+                                institutional-grade insurance for our hot wallets.</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="height: fit-content; text-align: center;">
+                        <h4 style="margin-bottom: 1rem;">Need more help?</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Our support team
+                            is available 24/7 via live chat.</p>
+                        <button class="btn btn-primary" style="width: 100%;"
+                            onclick="window.toggleChatbot()">Live Chat</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- High-Performance Investment Center -->
+        <section id="invest">
+            <div class="container card-reveal" style="padding: 6rem 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rem;">
+                    <div>
+                        <h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 1rem;" id="invest-title">Investment <span class="gradient-text">Whale</span></h1>
+                        <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 600px;">Institutional yield strategies with automated consensus risk management.</p>
+                    </div>
+                    <div style="position: relative; width: 120px; height: 120px; flex-shrink: 0;">
+                        <img src="assets/vip_illustration.png" alt="VIP" style="width: 100%; height: 100%; object-fit: contain; position: relative; z-index: 1;">
+                        <img src="assets/premium_hero_bg.png" alt="" style="position: absolute; width: 200%; height: 200%; top: -50%; left: -50%; object-fit: cover; opacity: 0.1; z-index: 0; border-radius: 50%;">
+                    </div>
+                </div>
+
+                <!-- Main Tabs: Institutional Layout -->
+                <div class="filter-tabs" id="invest-main-tabs" style="margin-bottom: 3rem; gap: 1rem;">
+                    <div class="filter-tab active" onclick="switchInvestTab(this, 'hot')" style="flex: 1; justify-content: center; padding: 1rem;">🔥 Hot Plans</div>
+                    <div class="filter-tab" onclick="switchInvestTab(this, 'quantify')" style="flex: 1; justify-content: center; padding: 1rem;">⚡ Quantify</div>
+                    <div class="filter-tab" onclick="switchInvestTab(this, 'pledge')" style="flex: 1; justify-content: center; padding: 1rem;">🛡️ Pledge</div>
+                </div>
+
+                <!-- VIP Premium Chips -->
+                <div id="vip-filter-container" style="margin-bottom: 3rem; overflow-x: auto; padding-bottom: 1rem;">
+                    <div style="display: flex; gap: 0.85rem; min-width: max-content;">
+                        <div class="vip-sub-tab active" onclick="filterByVip(this, 'all')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800; color: var(--text-muted); text-transform: uppercase;">All levels</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip0')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP0</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip1')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP1</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip2')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP2</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip3')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP3</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip4')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP4</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip5')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP5</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip6')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP6</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip7')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP7</div>
+                        <div class="vip-sub-tab" onclick="filterByVip(this, 'vip8')" style="padding: 0.6rem 1.5rem; background: var(--bg-secondary); border-radius: 100px; font-size: 0.8rem; cursor: pointer; border: 1px solid var(--card-border); font-weight: 800;">VIP8</div>
+                    </div>
+                </div>
+
+                <!-- Product Display Area -->
+                <div id="invest-content-area">
+                    <div class="portfolio-grid" id="invest-container">
+                        <!-- Portfolios will be rendered here -->
+                    </div>
+                </div>
+
+                <div id="vip-packages-view" style="display: none; max-width: 600px; margin: 0 auto; background: var(--bg-secondary); padding: 2.5rem; border-radius: var(--card-radius); border: 1px solid var(--card-border); box-shadow: var(--card-shadow);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+                        <div style="width: 6px; height: 24px; background: var(--accent-green); border-radius: 4px;"></div>
+                        <h2 style="font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em;">Digital Governance</h2>
+                    </div>
+
+                    <div id="vip-packages-list" style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 2.5rem;">
+                        <!-- VIP Cards will be rendered here by JS -->
+                    </div>
+
+                    <div style="color: var(--premium-gold); font-size: 0.85rem; line-height: 1.6; margin-bottom: 2.5rem; border-top: 1px solid var(--card-border); padding-top: 2rem; font-weight: 500;">
+                        <span style="font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 0.5rem; font-size: 0.75rem;">Consensus Deposit Policy</span>
+                        Premium membership deposits are fully refundable. Subscribers enjoy enhanced liquidity and exclusive consensus signals.
+                    </div>
+
+                    <div style="background: var(--bg-primary); border-radius: 16px; padding: 1.25rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--card-border);">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="width: 36px; height: 36px; background: rgba(52, 199, 89, 0.1); color: var(--accent-green); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                            </div>
+                            <span style="font-size: 0.95rem; font-weight: 600;">Available: <span id="vip-balance-display" style="font-weight: 800; color: var(--text-main);">2,374,263.61</span> USDT</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group" style="margin-bottom: 2.5rem;">
+                         <label style="font-size: 0.75rem; color: var(--text-main); margin-bottom: 0.75rem; display: block; font-weight: 700; text-transform: uppercase;">Authorization Required</label>
+                         <input type="password" id="vip-safe-password" placeholder="••••••••" style="width: 100%; padding: 1.1rem; border-radius: 16px; border: 1.5px solid var(--card-border); background: var(--bg-primary); color: var(--text-main); font-size: 1.2rem; outline: none; letter-spacing: 0.3rem;">
+                    </div>
+                    
+                    <button class="btn btn-primary" style="width: 100%; padding: 1.2rem; font-size: 1.1rem;" onclick="processVipUpgrade()">
+                        Authorize Upgrade
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- My Investments Section -->
+        <section id="investments">
+            <div class="container" style="padding: 6rem 0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 3rem;">
+                    <div>
+                        <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">Active <span
+                                class="gradient-text">Investments</span></h1>
+                        <p style="color: var(--text-muted);">Track your profit growth in real-time.</p>
+                    </div>
+                    <button class="btn btn-ghost" onclick="navigate('invest')">+ New Investment</button>
+                </div>
+
+                <div class="feature-grid" id="active-investments-container">
+                    <!-- Active investments scroll or grid -->
+                </div>
+            </div>
+        </section>
+        <!-- Professional P2P Marketplace -->
+        <section id="p2p">
+            <div class="container" style="padding: 6rem 0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4rem;">
+                    <div>
+                        <h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1; margin-bottom: 1rem;">P2P <span class="gradient-text">Exchange</span></h1>
+                        <p style="color: var(--text-muted); font-size: 1rem; max-width: 500px;">Buy and sell crypto directly with zero fees and escrow protection.</p>
+                    </div>
+                    <div style="display: flex; gap: 1.5rem; align-items: center;">
+                        <div style="background: var(--bg-secondary); padding: 0.75rem 1.5rem; border-radius: 14px; border: 1px solid var(--card-border); display: flex; align-items: center; gap: 0.75rem;">
+                             <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Fiat Node</span>
+                             <select id="p2p-fiat-selector" onchange="setP2PFiat(this.value)" style="background: transparent; border: none; color: var(--text-main); font-weight: 800; cursor: pointer; outline: none; font-size: 1rem; font-family: var(--font-body);">
+                                 <option value="USD">USD ($)</option>
+                                 <option value="EUR">EUR (€)</option>
+                                 <option value="GBP">GBP (£)</option>
+                                 <option value="CAD">CAD (CA$)</option>
+                                 <option value="AED">AED (د.إ)</option>
+                                 <option value="TRY">TRY (₺)</option>
+                                 <option value="BRL">BRL (R$)</option>
+                                 <option value="INR">INR (₹)</option>
+                                 <option value="PKR">PKR (₨)</option>
+                                 <option value="PHP">PHP (₱)</option>
+                                 <option value="MYR">MYR (RM)</option>
+                                 <option value="VND">VND (₫)</option>
+                                 <option value="NGN">NGN (₦)</option>
+                                 <option value="KES">KES (KSh)</option>
+                                 <option value="ZAR">ZAR (R)</option>
+                                 <option value="XOF">XOF (CFA)</option>
+                             </select>
+                        </div>
+                        <div style="display: flex; background: var(--bg-secondary); padding: 0.4rem; border-radius: 16px; border: 1px solid var(--card-border);">
+                            <button class="btn btn-sm btn-primary" id="p2p-buy-btn" onclick="setP2PType('buy')" style="padding: 0.6rem 2rem; border-radius: 12px; font-weight: 800;">Buy</button>
+                            <button class="btn btn-sm btn-ghost" id="p2p-sell-btn" onclick="setP2PType('sell')" style="padding: 0.6rem 2rem; border-radius: 12px; font-weight: 800;">Sell</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-tabs" style="margin-bottom: 2rem;">
+                    <button class="filter-tab active" onclick="filterP2P('USDT', this)">USDT</button>
+                    <button class="filter-tab" onclick="filterP2P('BTC', this)">BTC</button>
+                    <button class="filter-tab" onclick="filterP2P('ETH', this)">ETH</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 300px; gap: 2rem; align-items: flex-start;">
+                    <div id="p2p-ads-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Ads will be injected here -->
+                    </div>
+
+                    <div class="stat-card" style="text-align: left; padding: 2.5rem; border: 1px solid var(--card-border); background: linear-gradient(145deg, var(--bg-secondary), var(--bg-primary));">
+                        <h4 style="margin-bottom: 2rem; font-weight: 800; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-green);">Trust & Safety</h4>
+                        <div style="display: flex; flex-direction: column; gap: 1.5rem; font-size: 0.9rem; line-height: 1.5;">
+                            <div style="display: flex; gap: 1.25rem;">
+                                <div
+                                    style="width: 28px; height: 28px; background: rgba(52, 199, 89, 0.1); color: var(--accent-green); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800;">
+                                    1</div>
+                                <p style="color: var(--text-muted);"><strong style="color: var(--text-main);">Escrow Lock:</strong> Crypto is automatically held by Goalign Securitas upon order placement.</p>
+                            </div>
+                            <div style="display: flex; gap: 1.25rem;">
+                                <div
+                                    style="width: 28px; height: 28px; background: rgba(52, 199, 89, 0.1); color: var(--accent-green); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800;">
+                                    2</div>
+                                <p style="color: var(--text-muted);"><strong style="color: var(--text-main);">Direct Payout:</strong> Transfer funds to the seller using your preferred local bank or wallet.</p>
+                            </div>
+                            <div style="display: flex; gap: 1.25rem;">
+                                <div
+                                    style="width: 28px; height: 28px; background: rgba(52, 199, 89, 0.1); color: var(--accent-green); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800;">
+                                    3</div>
+                                <p style="color: var(--text-muted);"><strong style="color: var(--text-main);">Release:</strong> Once payment is verified, crypto is instantly released to your Spot wallet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===========================  NOTIFICATIONS PAGE  =========================== -->
+        <section id="notifications">
+            <div class="container" style="padding: 3rem 0; max-width: 720px;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+                    <h1 style="font-size: 2rem; font-weight: 800;">Notifications</h1>
+                    <span style="background: var(--accent-green); color: #000; font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 100px;">3 New</span>
+                </div>
+
+                <!-- Tabs -->
+                <div class="filter-tabs" style="margin-bottom: 2rem;">
+                    <div class="filter-tab active">All</div>
+                    <div class="filter-tab">System</div>
+                    <div class="filter-tab">Transactions</div>
+                    <div class="filter-tab">Promotions</div>
+                </div>
+
+                <!-- Notification Items -->
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <!-- Unread -->
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--accent-green); border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start; cursor: pointer; transition: box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,168,107,0.15)'" onmouseout="this.style.boxShadow=''">
+                        <div style="width: 42px; height: 42px; background: rgba(0,168,107,0.12); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem;">💰</div>
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <strong style="font-size: 0.9rem;">Investment Matured</strong>
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">2 min ago</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Your BTC Binary Trading plan has completed. <span style="color: var(--accent-green); font-weight: 700;">+$142.50 USDT</span> has been credited to your wallet.</p>
+                        </div>
+                        <div style="width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; flex-shrink: 0; margin-top: 6px;"></div>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-left: 3px solid #007AFF; border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start; cursor: pointer;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,122,255,0.1)'" onmouseout="this.style.boxShadow=''">
+                        <div style="width: 42px; height: 42px; background: rgba(0,122,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem;">🔐</div>
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <strong style="font-size: 0.9rem;">New Login Detected</strong>
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">1 hr ago</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">A new sign-in was detected from Lagos, Nigeria on Chrome/Windows. If this wasn't you, secure your account immediately.</p>
+                        </div>
+                        <div style="width: 8px; height: 8px; background: #007AFF; border-radius: 50%; flex-shrink: 0; margin-top: 6px;"></div>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-left: 3px solid #FF9900; border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start; cursor: pointer;" onmouseover="this.style.boxShadow='0 4px 20px rgba(255,153,0,0.1)'" onmouseout="this.style.boxShadow=''">
+                        <div style="width: 42px; height: 42px; background: rgba(255,153,0,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem;">🎉</div>
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <strong style="font-size: 0.9rem;">VIP Upgrade Bonus</strong>
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">3 hrs ago</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Upgrade to VIP 2 today and get a <strong>10% bonus</strong> on your first investment plan. Limited time offer — ends in 24 hours!</p>
+                        </div>
+                        <div style="width: 8px; height: 8px; background: #FF9900; border-radius: 50%; flex-shrink: 0; margin-top: 6px;"></div>
+                    </div>
+
+                    <!-- Separator -->
+                    <p style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin: 0.5rem 0 0.25rem; letter-spacing: 0.8px;">Earlier</p>
+
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start; opacity: 0.75; cursor: pointer;">
+                        <div style="width: 42px; height: 42px; background: rgba(128,128,128,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem;">📊</div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <strong style="font-size: 0.9rem;">Market Alert: BTC Surged</strong>
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">Yesterday</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">BTC jumped +6.2% in the last 24 hours, reaching $66,450. Your portfolio value has increased.</p>
+                        </div>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start; opacity: 0.75; cursor: pointer;">
+                        <div style="width: 42px; height: 42px; background: rgba(128,128,128,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem;">🤝</div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <strong style="font-size: 0.9rem;">Referral Commission Earned</strong>
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">2 days ago</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Your referred user completed their first investment. You've earned <span style="color: var(--accent-green); font-weight: 700;">+$12.00 USDT</span> commission.</p>
+                        </div>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; gap: 1rem; align-items: flex-start; opacity: 0.75; cursor: pointer;">
+                        <div style="width: 42px; height: 42px; background: rgba(128,128,128,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem;">📥</div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <strong style="font-size: 0.9rem;">Deposit Confirmed</strong>
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">3 days ago</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Your P2P deposit of <strong>500 USDT</strong> has been confirmed and added to your Spot Wallet.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-ghost" style="width: 100%; margin-top: 1.5rem;" onclick="showToast('Notifications', 'All notifications cleared')">Mark All as Read</button>
+            </div>
+        </section>
+
+        <!-- ===========================  ABOUT PAGE  =========================== -->
+        <section id="about">
+            <div class="container" style="padding: 5rem 0;">
+                <!-- Hero -->
+                <div style="text-align: center; margin-bottom: 5rem;">
+                    <p style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-green); margin-bottom: 1rem;">Our Story</p>
+                    <h1 style="font-size: 3.5rem; font-weight: 800; line-height: 1.1; margin-bottom: 1.5rem;">Built for the <span class="gradient-text">Next Generation</span> of Investors.</h1>
+                    <p style="color: var(--text-muted); font-size: 1.15rem; max-width: 680px; margin: 0 auto;">Goalign was founded in 2021 with one mission: to give every person on earth access to institutional-grade financial tools — previously reserved for billionaires and hedge funds.</p>
+                </div>
+
+                <!-- Stats row -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 5rem;">
+                    <div class="stat-card" style="text-align: center; padding: 2rem;">
+                        <h2 style="font-size: 2.5rem; color: var(--accent-green); font-weight: 900;">12M+</h2>
+                        <p style="color: var(--text-muted);">Users Worldwide</p>
+                    </div>
+                    <div class="stat-card" style="text-align: center; padding: 2rem;">
+                        <h2 style="font-size: 2.5rem; color: var(--accent-green); font-weight: 900;">$45B+</h2>
+                        <p style="color: var(--text-muted);">Assets Under Management</p>
+                    </div>
+                    <div class="stat-card" style="text-align: center; padding: 2rem;">
+                        <h2 style="font-size: 2.5rem; color: var(--accent-green); font-weight: 900;">180+</h2>
+                        <p style="color: var(--text-muted);">Countries Supported</p>
+                    </div>
+                    <div class="stat-card" style="text-align: center; padding: 2rem;">
+                        <h2 style="font-size: 2.5rem; color: var(--accent-green); font-weight: 900;">24/7</h2>
+                        <p style="color: var(--text-muted);">Live Support</p>
+                    </div>
+                </div>
+
+                <!-- Mission -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; margin-bottom: 5rem;">
+                    <div>
+                        <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 1.5rem;">Our <span class="gradient-text">Mission</span></h2>
+                        <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.8; margin-bottom: 1.5rem;">We believe wealth building shouldn't be a privilege. Goalign democratizes access to crypto, equities, and alternative investments through smart technology and zero-barrier onboarding.</p>
+                        <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.8;">From a student investing $50 to a corporation managing $50M, our platform scales to every ambition.</p>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="stat-card" style="padding: 1.5rem;">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🌍</div>
+                            <h4>Global Reach</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Available in 180+ countries with local payment methods.</p>
+                        </div>
+                        <div class="stat-card" style="padding: 1.5rem;">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔐</div>
+                            <h4>Regulated</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Licensed and regulated across major financial jurisdictions.</p>
+                        </div>
+                        <div class="stat-card" style="padding: 1.5rem;">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡</div>
+                            <h4>Institutional-Grade</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Same infrastructure used by hedge funds. Now available for all.</p>
+                        </div>
+                        <div class="stat-card" style="padding: 1.5rem;">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🤝</div>
+                            <h4>Community First</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Earn referral rewards and grow together with our ecosystem.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team -->
+                <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 2rem; text-align: center;">Leadership <span class="gradient-text">Team</span></h2>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 4rem;">
+                    <div class="stat-card" style="text-align: center; padding: 2rem;">
+                        <img src="assets/premium_avatar.png" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent-green); object-fit: cover; margin-bottom: 1rem;">
+                        <h4>James Morel</h4>
+                        <p style="font-size: 0.8rem; color: var(--accent-green);">CEO & Co-Founder</p>
+                    </div>
+                    <div class="stat-card" style="text-align: center; padding: 2rem;">
+                        <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #007AFF, #5856D6); border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: #fff;">SA</div>
+                        <h4>Sophia Adeyemi</h4>
+                        <p style="font-size: 0.8rem; color: var(--accent-green);">CTO & Co-Founder</p>
+                    </div>
+                    <div class="stat-card" style="text-align: center; padding: 2rem;">
+                        <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #FF9900, #FF3B30); border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: #fff;">LK</div>
+                        <h4>Lena Kovacs</h4>
+                        <p style="font-size: 0.8rem; color: var(--accent-green);">CFO</p>
+                    </div>
+                    <div class="stat-card" style="text-align: center; padding: 2rem;">
+                        <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #AF52DE, #5856D6); border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: #fff;">RC</div>
+                        <h4>Ravi Chandra</h4>
+                        <p style="font-size: 0.8rem; color: var(--accent-green);">Head of Product</p>
+                    </div>
+                </div>
+
+                <div class="stat-card" style="text-align: center; padding: 4rem; border: 1px solid var(--accent-green);">
+                    <h2 style="margin-bottom: 1rem;">Want to join our team?</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 2rem;">We're always looking for talented people who share our vision.</p>
+                    <button class="btn btn-primary" style="padding: 1rem 3rem;" onclick="navigate('careers')">View Open Roles</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===========================  BLOG PAGE  =========================== -->
+        <section id="blog">
+            <div class="container" style="padding: 5rem 0;">
+                <div style="text-align: center; margin-bottom: 3rem;">
+                    <p style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-green); margin-bottom: 0.75rem;">Insights & Research</p>
+                    <h1 style="font-size: 3rem; font-weight: 800;">Goalign <span class="gradient-text">Blog</span></h1>
+                </div>
+
+                <!-- Featured Post -->
+                <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 20px; overflow: hidden; margin-bottom: 3rem; cursor: pointer;" onclick="showToast('Blog', 'Opening article...')">
+                    <div style="background: linear-gradient(135deg, #1E2329 0%, #0B0E11 100%); height: 220px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+                        <img src="assets/Blockchain.png" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.18;">
+                        <div style="position: relative; z-index: 1; text-align: center; padding: 2rem;">
+                            <span style="background: var(--accent-green); color: #000; font-size: 0.72rem; font-weight: 800; padding: 0.3rem 0.8rem; border-radius: 100px;">FEATURED</span>
+                            <h2 style="font-size: 1.8rem; color: #fff; margin-top: 1rem; line-height: 1.3;">Why VIP Investment Plans Are the Future of Passive Income</h2>
+                        </div>
+                    </div>
+                    <div style="padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <p style="color: var(--text-muted); font-size: 0.85rem;">March 15, 2026 · 8 min read</p>
+                        </div>
+                        <span style="color: var(--accent-green); font-weight: 700; font-size: 0.9rem;">Read →</span>
+                    </div>
+                </div>
+
+                <!-- Blog Grid -->
+                <div class="feature-grid">
+                    <div class="stat-card" style="padding: 1.5rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''" onclick="showToast('Blog', 'Opening article...')">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--accent-green); letter-spacing: 1px;">MARKETS</span>
+                        <h4 style="margin: 0.75rem 0 0.5rem; line-height: 1.4;">Bitcoin's Next Halving: What Investors Must Know</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">The 2028 halving could trigger the next bull cycle. Here's how to position yourself now.</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">Feb 20, 2026 · 5 min</p>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''" onclick="showToast('Blog', 'Opening article...')">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #007AFF; letter-spacing: 1px;">EDUCATION</span>
+                        <h4 style="margin: 0.75rem 0 0.5rem; line-height: 1.4;">DeFi vs. CeFi: Which Earns More in 2026?</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">We break down the yields, risks, and liquidity of top DeFi protocols vs centralized platforms.</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">Feb 10, 2026 · 7 min</p>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''" onclick="showToast('Blog', 'Opening article...')">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #FF9900; letter-spacing: 1px;">PRODUCT</span>
+                        <h4 style="margin: 0.75rem 0 0.5rem; line-height: 1.4;">Introducing P2P 2.0: Trade Crypto in Your Local Currency</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">Multi-fiat P2P is here — USD, EUR, NGN, XOF and more. No limits, no middlemen.</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">Jan 28, 2026 · 4 min</p>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''" onclick="showToast('Blog', 'Opening article...')">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #AF52DE; letter-spacing: 1px;">STRATEGY</span>
+                        <h4 style="margin: 0.75rem 0 0.5rem; line-height: 1.4;">5 Portfolio Strategies for Bear Markets</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">When the market dumps, the smart money doesn't panic. Learn the 5 strategies pros use.</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">Jan 15, 2026 · 6 min</p>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''" onclick="showToast('Blog', 'Opening article...')">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--accent-green); letter-spacing: 1px;">GUIDE</span>
+                        <h4 style="margin: 0.75rem 0 0.5rem; line-height: 1.4;">Complete Guide to Goalign VIP Membership</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">Everything you need to know about VIP tiers, daily ROI, and exclusive benefits for each level.</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">Jan 5, 2026 · 9 min</p>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''" onclick="showToast('Blog', 'Opening article...')">
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #34C759; letter-spacing: 1px;">SECURITY</span>
+                        <h4 style="margin: 0.75rem 0 0.5rem; line-height: 1.4;">How We Keep Your Funds Safe: A Technical Deep-Dive</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">Cold storage, 2FA, HSM modules and insurance — our complete security architecture explained.</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">Dec 22, 2025 · 10 min</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===========================  CAREERS PAGE  =========================== -->
+        <section id="careers">
+            <div class="container" style="padding: 5rem 0;">
+                <div style="text-align: center; margin-bottom: 5rem;">
+                    <p style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-green); margin-bottom: 0.75rem;">We're Hiring</p>
+                    <h1 style="font-size: 3.5rem; font-weight: 800; line-height: 1.1; margin-bottom: 1.5rem;">Build the Future of <span class="gradient-text">Finance</span> with Us</h1>
+                    <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Join a world-class team of engineers, designers, and finance professionals shaping the next generation of investment platforms.</p>
+                </div>
+
+                <!-- Perks -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 5rem;">
+                    <div class="stat-card" style="padding: 1.5rem; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">🌎</div>
+                        <h4>Remote-First</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">Work from anywhere. We have team members in 40+ countries.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">💎</div>
+                        <h4>Competitive Pay</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">Top-of-market salaries, equity, and crypto bonus packages.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">🚀</div>
+                        <h4>Growth</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">Fast track your career with learning budgets up to $5,000/yr.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 1.5rem; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">🏥</div>
+                        <h4>Health & Wellness</h4>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">Full health, dental, vision coverage + unlimited PTO.</p>
+                    </div>
+                </div>
+
+                <!-- Job Listings -->
+                <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem;">Open Positions</h2>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''">
+                        <div>
+                            <h4 style="margin-bottom: 0.3rem;">Senior Full-Stack Engineer</h4>
+                            <p style="font-size: 0.82rem; color: var(--text-muted);">Engineering · Remote · Full-Time</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="showToast('Careers', 'Opening application form...')">Apply Now</button>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''">
+                        <div>
+                            <h4 style="margin-bottom: 0.3rem;">Risk & Compliance Analyst</h4>
+                            <p style="font-size: 0.82rem; color: var(--text-muted);">Finance · Remote · Full-Time</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="showToast('Careers', 'Opening application form...')">Apply Now</button>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''">
+                        <div>
+                            <h4 style="margin-bottom: 0.3rem;">Product Designer (UX/UI)</h4>
+                            <p style="font-size: 0.82rem; color: var(--text-muted);">Design · Remote · Full-Time</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="showToast('Careers', 'Opening application form...')">Apply Now</button>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''">
+                        <div>
+                            <h4 style="margin-bottom: 0.3rem;">Blockchain Security Engineer</h4>
+                            <p style="font-size: 0.82rem; color: var(--text-muted);">Security · Remote · Full-Time</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="showToast('Careers', 'Opening application form...')">Apply Now</button>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''">
+                        <div>
+                            <h4 style="margin-bottom: 0.3rem;">Growth Marketing Manager</h4>
+                            <p style="font-size: 0.82rem; color: var(--text-muted);">Marketing · Remote  · Full-Time</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="showToast('Careers', 'Opening application form...')">Apply Now</button>
+                    </div>
+                    <div style="background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent-green)'" onmouseout="this.style.borderColor=''">
+                        <div>
+                            <h4 style="margin-bottom: 0.3rem;">Customer Success Lead – Africa</h4>
+                            <p style="font-size: 0.82rem; color: var(--text-muted);">Operations · Lagos / Remote · Full-Time</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="showToast('Careers', 'Opening application form...')">Apply Now</button>
+                    </div>
+                </div>
+
+                <p style="text-align: center; color: var(--text-muted); margin-top: 3rem; font-size: 0.9rem;">Don't see a role that fits? <a style="color: var(--accent-green); cursor: pointer; font-weight: 700;" onclick="showToast('Careers', 'Sending application...')">Send us an open application →</a></p>
+            </div>
+        </section>
+
+        <!-- ===========================  PRIVACY PAGE  =========================== -->
+        <section id="privacy">
+            <div class="container" style="padding: 5rem 0; max-width: 780px;">
+                <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">Privacy <span class="gradient-text">Policy</span></h1>
+                <p style="color: var(--text-muted); margin-bottom: 3rem;">Last updated: March 1, 2026</p>
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <div class="stat-card" style="padding: 2rem; text-align: left;">
+                        <h3 style="margin-bottom: 1rem;">1. Information We Collect</h3>
+                        <p style="color: var(--text-muted); line-height: 1.8;">We collect information you provide directly (name, email, government ID for KYC), information generated through platform use (transaction history, portfolio data), and technical data (IP address, device info, cookies) to enhance security and user experience.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 2rem; text-align: left;">
+                        <h3 style="margin-bottom: 1rem;">2. How We Use Your Data</h3>
+                        <p style="color: var(--text-muted); line-height: 1.8;">Your data is used to operate the platform, comply with regulatory requirements (AML/KYC), send service notifications, and improve our products. We never sell your personal data to third parties.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 2rem; text-align: left;">
+                        <h3 style="margin-bottom: 1rem;">3. Data Security</h3>
+                        <p style="color: var(--text-muted); line-height: 1.8;">All data is encrypted at rest (AES-256) and in transit (TLS 1.3). We employ HSMs, multi-sig wallets, and regular third-party security audits. 98% of assets are held in cold storage.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 2rem; text-align: left;">
+                        <h3 style="margin-bottom: 1rem;">4. Your Rights (GDPR/CCPA)</h3>
+                        <p style="color: var(--text-muted); line-height: 1.8;">You have the right to access, correct, delete, or export your personal data. You can also opt out of marketing communications at any time. Contact <strong>privacy@goalign.io</strong> for data requests.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 2rem; text-align: left;">
+                        <h3 style="margin-bottom: 1rem;">5. Cookies</h3>
+                        <p style="color: var(--text-muted); line-height: 1.8;">We use essential cookies for authentication and optional analytics cookies (which you can reject). We do not use advertising cookies or share data with ad networks.</p>
+                    </div>
+                </div>
+                <button class="btn btn-ghost" style="margin-top: 2rem;" onclick="showToast('Privacy', 'Contact privacy@goalign.io for data requests.')">Contact Privacy Team</button>
+            </div>
+        </section>
+
+        <!-- ===========================  TERMS PAGE  =========================== -->
+        <section id="terms">
+            <div class="container" style="padding: 5rem 0; max-width: 780px;">
+                <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">Terms of <span class="gradient-text">Service</span></h1>
+                <p style="color: var(--text-muted); margin-bottom: 3rem;">Last updated: March 1, 2026 · By using Goalign you agree to these terms.</p>
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <div class="stat-card" style="padding: 2rem; text-align: left;">
+                        <h3 style="margin-bottom: 1rem;">1. Eligibility</h3>
+                        <p style="color: var(--text-muted); line-height: 1.8;">You must be at least 18 years old and not a resident of a sanctioned country to use our platform. By registering you confirm that all information provided is accurate and that you understand the risks associated with cryptocurrency and investment products.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 2rem; text-align: left;">
+                        <h3 style="margin-bottom: 1rem;">2. Investment Risk Disclosure</h3>
+                        <p style="color: var(--text-muted); line-height: 1.8;">All investment plans carry risk. Past performance does not guarantee future results. Cryptocurrency values can decrease significantly. Never invest more than you can afford to lose. Goalign is not a financial advisor.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 2rem; text-align: left;">
+                        <h3 style="margin-bottom: 1rem;">3. Account Responsibilities</h3>
+                        <p style="color: var(--text-muted); line-height: 1.8;">You are responsible for maintaining account security including 2FA activation. Goalign is not liable for losses resulting from unauthorized access caused by your negligence. Report suspected breaches immediately.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- ===========================  PRESS PAGE  =========================== -->
+        <section id="press">
+            <div class="container" style="padding: 5rem 0; text-align: center;">
+                <h1 style="font-size: 3rem; margin-bottom: 2rem;">Press <span class="gradient-text">Room</span></h1>
+                <p style="color: var(--text-muted); font-size: 1.2rem; max-width: 600px; margin: 0 auto;">Official news, brand assets, and media inquiries from Goalign.</p>
+                <div class="stat-card" style="margin-top: 4rem; padding: 3rem;">
+                    <h3>For media inquiries, please contact:</h3>
+                    <p style="color: var(--accent-green); font-size: 1.5rem; margin-top: 1rem;">press@goalign.io</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===========================  SITEMAP PAGE  =========================== -->
+        <section id="sitemap">
+            <div class="container" style="padding: 5rem 0;">
+                <h1 style="font-size: 3rem; margin-bottom: 2rem; text-align: center;">Site <span class="gradient-text">Map</span></h1>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3rem; margin-top: 3rem;">
+                    <div>
+                        <h4 style="margin-bottom: 1.5rem;">Trading</h4>
+                        <ul style="list-style: none; color: var(--text-muted); line-height: 2;">
+                            <li>Prices</li>
+                            <li>Crypto Exchange</li>
+                            <li>Stock Market</li>
+                            <li>Binary Trading</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 1.5rem;">Earn</h4>
+                        <ul style="list-style: none; color: var(--text-muted); line-height: 2;">
+                            <li>Savings</li>
+                            <li>VIP Investment</li>
+                            <li>Staking</li>
+                            <li>Referral Program</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 1.5rem;">Company</h4>
+                        <ul style="list-style: none; color: var(--text-muted); line-height: 2;">
+                            <li>About Us</li>
+                            <li>Careers</li>
+                            <li>Blog</li>
+                            <li>Press</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 1.5rem;">Legal</h4>
+                        <ul style="list-style: none; color: var(--text-muted); line-height: 2;">
+                            <li>Privacy Policy</li>
+                            <li>Terms of Service</li>
+                            <li>Compliance</li>
+                            <li>Cookie Policy</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===========================  REGULATED PAGE  =========================== -->
+        <section id="regulated">
+            <div class="container" style="padding: 5rem 0; text-align: center;">
+                <h1 style="font-size: 3rem; margin-bottom: 2rem;">Security & <span class="gradient-text">Regulation</span></h1>
+                <p style="color: var(--text-muted); font-size: 1.2rem; max-width: 700px; margin: 0 auto;">Goalign is committed to global compliance and institutional-grade security standards.</p>
+                <div class="feature-grid" style="margin-top: 4rem;">
+                    <div class="stat-card" style="padding: 2.5rem;">
+                        <i class="fa-solid fa-shield-halved" style="font-size: 2.5rem; color: var(--accent-green); margin-bottom: 1.5rem;"></i>
+                        <h3>Licensed Custodian</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 1rem;">Operating under FINCEN (US) and FCA (UK) authorized frameworks.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 2.5rem;">
+                        <i class="fa-solid fa-check-double" style="font-size: 2.5rem; color: var(--accent-green); margin-bottom: 1.5rem;"></i>
+                        <h3>AML/KYC Compliant</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 1rem;">Robust anti-money laundering and identity verification protocols.</p>
+                    </div>
+                    <div class="stat-card" style="padding: 2.5rem;">
+                        <i class="fa-solid fa-lock" style="font-size: 2.5rem; color: var(--accent-green); margin-bottom: 1.5rem;"></i>
+                        <h3>SOC 2 Type II</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 1rem;">Regularly audited for security, availability, and confidentiality.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Mobile Bottom Nav -->
+    <div class="bottom-nav">
+        <a onclick="navigate('home')" class="bottom-nav-item active">
+            <i class="fa-solid fa-house"></i>
+            Home
+        </a>
+        <a onclick="navigate('prices')" class="bottom-nav-item">
+            <i class="fa-solid fa-chart-line"></i>
+            Prices
+        </a>
+        <a onclick="navigate('alpha')" class="bottom-nav-item">
+            <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            Trade
+        </a>
+        <a onclick="navigate('portfolio')" class="bottom-nav-item">
+            <i class="fa-solid fa-wallet"></i>
+            Portfolio
+        </a>
+        <a onclick="navigate('invest')" class="bottom-nav-item">
+            <i class="fa-solid fa-gem"></i>
+            Invest
+        </a>
+        <a onclick="navigate('security')" class="bottom-nav-item">
+            <i class="fa-solid fa-user"></i>
+            Account
+        </a>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleModal('auth')">✕</span>
+            <h2 style="margin-bottom: 0.5rem; text-align: center;" id="auth-title">Welcome Back</h2>
+            <p style="color: var(--text-muted); text-align: center; margin-bottom: 2rem;">Enter your details to
+                continue.</p>
+
+            <div class="input-group">
+                <label>Email Address</label>
+                <div class="input-wrap"><input type="email" placeholder="name@example.com"></div>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <div class="input-wrap"><input type="password" placeholder="••••••••"></div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem;" id="auth-submit-btn"
+                onclick="toggleModal('auth')">Sign In</button>
+
+            <div style="margin: 2rem 0; text-align: center; color: var(--text-muted); position: relative;">
+                <span style="background: var(--bg-secondary); padding: 0 1rem; position: relative; z-index: 1;">Or
+                    continue with</span>
+                <div
+                    style="position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: var(--card-border);">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <button class="btn btn-ghost"
+                    style="border: 1px solid var(--card-border); font-size: 0.85rem;">Google</button>
+                <button class="btn btn-ghost"
+                    style="border: 1px solid var(--card-border); font-size: 0.85rem;">Apple</button>
+            </div>
+
+            <p style="text-align: center; margin-top: 2rem; color: var(--text-muted); font-size: 0.9rem;" id="auth-toggle-link" onclick="toggleAuthMode()">
+                Don't have an account? <span style="color: var(--accent-green); cursor: pointer;">Sign up</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Buy Modal -->
+    <div class="modal-overlay" id="buy-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleModal('buy')">✕</span>
+            <h2 style="margin-bottom: 1.5rem;">Confirm Purchase</h2>
+            <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <span style="color: var(--text-muted);">Buying</span>
+                    <span id="buy-coin-name" style="font-weight: 700;">Bitcoin</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <span style="color: var(--text-muted);">Amount</span>
+                    <span id="buy-amount-usd" style="font-weight: 700;">$100.00 USD</span>
+                </div>
+                <div
+                    style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 1px solid var(--card-border);">
+                    <span style="color: var(--text-muted);">Est. Receive</span>
+                    <span id="buy-receive-amt" style="font-weight: 700; color: var(--accent-green);">0.00155 BTC</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; padding: 1rem;" onclick="confirmPurchase()">Confirm &
+                Pay</button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"
+        style="position: fixed; top: 20px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px;">
+    </div>
+
+
+    <!-- Scripts -->
+    <script type="module" src="js/app.js"></script>
+
+    <!-- ===== AI Chatbot Widget ===== -->
+    <style>
+        #chatbot-fab {
+            position: fixed;
+            bottom: 5rem;
+            right: 1.5rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00A86B, #14F195);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 24px rgba(0, 168, 107, 0.4);
+            z-index: 9999;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+        }
+        #chatbot-fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 32px rgba(0, 168, 107, 0.5);
+        }
+        #chatbot-fab svg { color: #fff; }
+        #chatbot-fab .chat-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 18px;
+            height: 18px;
+            background: #FF3B30;
+            border-radius: 50%;
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #chatbot-panel {
+            position: fixed;
+            bottom: 8.5rem;
+            right: 1.5rem;
+            width: 360px;
+            max-height: 520px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+            overflow: hidden;
+            animation: chatSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #chatbot-panel.open { display: flex; }
+
+        @keyframes chatSlideUp {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        #chatbot-header {
+            background: linear-gradient(135deg, #00A86B 0%, #0d6e47 100%);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        #chatbot-header .chat-title { display: flex; align-items: center; gap: 0.75rem; }
+        #chatbot-header .avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+        }
+        #chatbot-header h4 { font-size: 0.95rem; font-weight: 700; color: #fff; margin: 0; }
+        #chatbot-header p { font-size: 0.72rem; color: rgba(255,255,255,0.75); margin: 0; }
+        #chatbot-close {
+            background: rgba(255,255,255,0.15);
+            border: none; border-radius: 50%;
+            width: 30px; height: 30px;
+            cursor: pointer; color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        #chatbot-close:hover { background: rgba(255,255,255,0.3); }
+
+        #chatbot-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            max-height: 330px;
+            scrollbar-width: thin;
+        }
+
+        .chat-msg { display: flex; gap: 0.6rem; align-items: flex-end; }
+        .chat-msg.user { flex-direction: row-reverse; }
+        .chat-bubble {
+            max-width: 78%;
+            padding: 0.65rem 1rem;
+            border-radius: 16px;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+        .chat-msg.bot .chat-bubble {
+            background: var(--bg-primary, #0B0E11);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+        }
+        .chat-msg.user .chat-bubble {
+            background: linear-gradient(135deg, #00A86B, #14F195);
+            color: #000;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-msg .bot-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, #00A86B, #14F195);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; color: #000; font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .chat-typing { display: flex; align-items: center; gap: 4px; padding: 0.65rem 0.85rem; }
+        .chat-typing span {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--accent-green);
+            animation: chatDot 1.2s infinite;
+        }
+        .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+        .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes chatDot {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        #chatbot-quick-replies {
+            display: flex; gap: 0.5rem; flex-wrap: wrap;
+            padding: 0 1.25rem 0.5rem;
+        }
+        .quick-reply-btn {
+            background: var(--bg-primary, #0B0E11);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 0.35rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .quick-reply-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        #chatbot-input-row {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.85rem 1rem;
+            border-top: 1px solid var(--card-border);
+            align-items: center;
+            background: var(--bg-secondary);
+        }
+        #chatbot-input {
+            flex: 1;
+            background: var(--bg-primary, #0B0E11);
+            border: 1px solid var(--card-border);
+            border-radius: 100px;
+            padding: 0.6rem 1rem;
+            color: var(--text-main);
+            font-size: 0.875rem;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        #chatbot-input:focus { border-color: var(--accent-green); }
+        #chatbot-send {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: linear-gradient(135deg,#00A86B,#14F195);
+            border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: transform 0.2s, opacity 0.2s;
+        }
+        #chatbot-send:hover { transform: scale(1.1); }
+        #chatbot-send svg { color: #000; }
+    </style>
+
+    <!-- FAB trigger -->
+    <button id="chatbot-fab" onclick="window.toggleChatbot()" aria-label="Open AI Assistant">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="chat-badge">1</span>
+    </button>
+
+    <!-- Chat Panel -->
+    <div id="chatbot-panel">
+        <div id="chatbot-header">
+            <div class="chat-title">
+                <div class="avatar">🤖</div>
+                <div>
+                    <h4>Goalign AI</h4>
+                    <p>● Online · Crypto & Investment Expert</p>
+                </div>
+            </div>
+            <button id="chatbot-close" onclick="window.toggleChatbot()" aria-label="Close chat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div id="chatbot-messages">
+            <!-- Messages injected by JS -->
+        </div>
+
+        <div id="chatbot-quick-replies">
+            <button class="quick-reply-btn" onclick="sendQuickReply('What is VIP?')">What is VIP?</button>
+            <button class="quick-reply-btn" onclick="sendQuickReply('How to invest?')">How to invest?</button>
+            <button class="quick-reply-btn" onclick="sendQuickReply('Deposit methods')">Deposit methods</button>
+            <button class="quick-reply-btn" onclick="sendQuickReply('Current BTC price')">BTC price</button>
+        </div>
+
+        <div id="chatbot-input-row">
+            <input id="chatbot-input" type="text" placeholder="Ask me anything..." autocomplete="off" />
+            <button id="chatbot-send" onclick="window.sendChatMessage()" aria-label="Send">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PRICE ALERT MODAL
+    ============================================================ -->
+    <div id="alert-modal" onclick="if(event.target===this)closeAlertModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center;">
+        <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;width:100%;max-width:420px;padding:2.5rem;box-shadow:0 40px 80px rgba(0,0,0,0.4);">
+            <h3 style="margin-bottom:0.4rem;">🔔 Set Price Alert</h3>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;">Get notified when <b id="alert-coin-name">BTC</b> hits your target · Current: <b id="alert-current-price">$64,231</b></p>
+            <div style="margin-bottom:1rem;">
+                <label style="font-size:0.8rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">ALERT TYPE</label>
+                <select id="alert-type" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.75rem;color:var(--text-main);font-size:0.9rem;">
+                    <option value="above">📈 Take-Profit — Price goes ABOVE</option>
+                    <option value="below">📉 Stop-Loss — Price drops BELOW</option>
+                </select>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label style="font-size:0.8rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">TARGET PRICE (USD)</label>
+                <input id="alert-price-input" type="number" step="0.01" style="width:100%;background:var(--bg-secondary);border:1.5px solid var(--card-border);border-radius:10px;padding:0.85rem 1rem;color:var(--text-main);font-size:1.1rem;font-weight:700;font-family:'JetBrains Mono';">
+            </div>
+            <div style="display:flex;gap:1rem;">
+                <button class="btn btn-ghost" style="flex:1;" onclick="closeAlertModal()">Cancel</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="saveAlert()">Set Alert 🔔</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         YIELD CALCULATOR MODAL
+    ============================================================ -->
+    <div id="yield-calc-modal" onclick="if(event.target===this)toggleYieldCalc()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center;">
+        <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;width:100%;max-width:460px;padding:2.5rem;box-shadow:0 40px 80px rgba(0,0,0,0.4);">
+            <h3 style="margin-bottom:0.4rem;">💰 Yield Calculator</h3>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;">Estimate your investment returns</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                <div>
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">AMOUNT ($)</label>
+                    <input id="yc-amount" type="number" value="1000" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);font-size:1rem;font-weight:700;font-family:'JetBrains Mono';">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">DAILY ROI (%)</label>
+                    <input id="yc-roi" type="number" value="2.5" step="0.1" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);font-size:1rem;font-weight:700;font-family:'JetBrains Mono';">
+                </div>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">DURATION (DAYS)</label>
+                <input id="yc-days" type="number" value="30" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);font-size:1rem;font-weight:700;font-family:'JetBrains Mono';">
+            </div>
+            <div id="yc-result"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="calculateYield()">Calculate Returns 🚀</button>
+            <button onclick="toggleYieldCalc()" style="width:100%;margin-top:0.75rem;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;">Close</button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         TRADE CHAT MODAL
+    ============================================================ -->
+    <div id="trade-chat-modal" onclick="if(event.target===this)closeTradeChat()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center;">
+        <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.4);display:flex;flex-direction:column;max-height:90vh;">
+            <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                <div>
+                    <div id="trade-chat-title" style="font-weight:800;font-size:1rem;">Trade Chat</div>
+                    <div style="font-size:0.8rem;color:var(--text-muted);">🔒 Escrow Protected · ⏱ Payment window: <span id="trade-timer" style="color:var(--accent-green);font-weight:800;font-family:'JetBrains Mono';">15:00</span></div>
+                </div>
+                <button onclick="closeTradeChat()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;">✕</button>
+            </div>
+            <div id="trade-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:0.75rem;min-height:280px;"></div>
+            <div style="padding:1rem;border-top:1px solid var(--card-border);flex-shrink:0;">
+                <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+                    <input id="trade-chat-input" type="text" placeholder="Type a message..." style="flex:1;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:100px;padding:0.6rem 1rem;color:var(--text-main);font-size:0.9rem;" onkeydown="if(event.key==='Enter')sendTradeMessage()">
+                    <button onclick="sendTradeMessage()" class="btn btn-primary btn-sm" style="border-radius:100px;padding:0.5rem 1rem;">Send</button>
+                </div>
+                <button onclick="markTradePaid()" class="btn btn-primary" style="width:100%;padding:0.9rem;font-weight:800;background:linear-gradient(135deg,#00A86B,#14F195);color:#000;">✅ Payment Sent — Release Crypto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         POST TRADE MODAL
+    ============================================================ -->
+    <div id="post-trade-modal" onclick="if(event.target===this)togglePostTrade()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:10000;align-items:center;justify-content:center;">
+        <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;width:100%;max-width:480px;padding:2.5rem;box-shadow:0 40px 80px rgba(0,0,0,0.4);">
+            <h3 style="margin-bottom:0.4rem;">📢 Post a Trade</h3>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;">Create your own P2P advertisement</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                <div>
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">TYPE</label>
+                    <select id="pt-type" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);">
+                        <option value="buy">Buy (I want to buy)</option>
+                        <option value="sell">Sell (I want to sell)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">ASSET</label>
+                    <select id="pt-asset" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);">
+                        <option>USDT</option><option>BTC</option><option>ETH</option><option>SOL</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                <div>
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">FIAT</label>
+                    <select id="pt-fiat" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);">
+                        <option>USD</option><option>EUR</option><option>GBP</option><option>NGN</option><option>INR</option><option>XOF</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">PRICE</label>
+                    <input id="pt-price" type="number" value="1.00" step="0.01" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);font-family:'JetBrains Mono';">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                <div>
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">MIN LIMIT</label>
+                    <input id="pt-min" type="number" value="100" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);font-family:'JetBrains Mono';">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">MAX LIMIT</label>
+                    <input id="pt-max" type="number" value="5000" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);font-family:'JetBrains Mono';">
+                </div>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label style="font-size:0.75rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:0.5rem;">PAYMENT METHOD</label>
+                <input id="pt-payment" type="text" value="Bank Transfer" style="width:100%;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:10px;padding:0.7rem 1rem;color:var(--text-main);" placeholder="e.g. Bank Transfer, PayPal...">
+            </div>
+            <div style="display:flex;gap:1rem;">
+                <button class="btn btn-ghost" style="flex:1;" onclick="togglePostTrade()">Cancel</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="submitPostTrade()">Post Ad 📢</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         2FA / OTP MODAL
+    ============================================================ -->
+    <div id="otp-modal" onclick="if(event.target===this){this.style.display='none'}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:10005;align-items:center;justify-content:center;">
+        <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:28px;width:100%;max-width:400px;padding:3rem;text-align:center;box-shadow:0 60px 100px rgba(0,0,0,0.5);">
+            <div style="font-size:3rem;margin-bottom:1rem;">🔐</div>
+            <h3 style="margin-bottom:0.5rem;">Two-Factor Verification</h3>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:2rem;">Enter the 6-digit code from your authenticator app</p>
+            <input id="otp-input" type="text" maxlength="6" placeholder="• • • • • •" style="width:100%;background:var(--bg-secondary);border:2px solid var(--card-border);border-radius:16px;padding:1.25rem;font-size:2rem;font-weight:900;font-family:'JetBrains Mono';letter-spacing:0.5rem;color:var(--text-main);text-align:center;margin-bottom:1.5rem;" oninput="this.value=this.value.replace(/\D/,'')">
+            <button class="btn btn-primary" style="width:100%;padding:1rem;font-size:1rem;font-weight:800;" onclick="verify2FA()">Verify Identity</button>
+            <p style="color:var(--text-muted);font-size:0.75rem;margin-top:1rem;">💡 Demo code: <b style="color:var(--accent-green);font-family:'JetBrains Mono';">248163</b></p>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         FOOTER SECTION
+    ============================================================ -->
+    <footer class="card-reveal" style="background: var(--color-bg-base); border-top: 1px solid var(--color-border); padding: 6rem 0 3rem; margin-top: 4rem;">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 4rem; margin-bottom: 4rem;">
+                <div>
+                    <a href="#" class="logo" style="margin-bottom: 2rem;">
+                        <img src="assets/Goalign1.png" alt="Goalign Logo">
+                    </a>
+                    <p style="color: var(--color-text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 2rem; max-width: 320px;">
+                        The ultimate high-performance trading ecosystem. Precision execution, institutional alpha, and decentralized security.
+                    </p>
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="width: 40px; height: 40px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;" onmouseover="this.style.borderColor='var(--color-accent-primary)'" onmouseout="this.style.borderColor='var(--color-border)'">
+                            <i class="fa-brands fa-twitter" style="color: var(--color-text-primary);"></i>
+                        </div>
+                        <div style="width: 40px; height: 40px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;" onmouseover="this.style.borderColor='var(--color-accent-primary)'" onmouseout="this.style.borderColor='var(--color-border)'">
+                            <i class="fa-brands fa-telegram" style="color: var(--color-text-primary);"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-accent-primary);">Platform</h4>
+                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 1rem;">
+                        <li><a href="#" onclick="navigate('home')" style="color: var(--color-text-secondary); text-decoration: none; font-size: 0.9rem; transition: 0.3s;" onmouseover="this.style.color='var(--color-text-primary)'" onmouseout="this.style.color='var(--color-text-secondary)'">Market</a></li>
+                        <li><a href="#" onclick="navigate('invest')" style="color: var(--color-text-secondary); text-decoration: none; font-size: 0.9rem; transition: 0.3s;" onmouseover="this.style.color='var(--color-text-primary)'" onmouseout="this.style.color='var(--color-text-secondary)'">Invest</a></li>
+                        <li><a href="#" onclick="navigate('p2p')" style="color: var(--color-text-secondary); text-decoration: none; font-size: 0.9rem; transition: 0.3s;" onmouseover="this.style.color='var(--color-text-primary)'" onmouseout="this.style.color='var(--color-text-secondary)'">Exchange</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-accent-gold);">Support</h4>
+                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 1rem;">
+                        <li><a href="#" onclick="navigate('help')" style="color: var(--color-text-secondary); text-decoration: none; font-size: 0.9rem; transition: 0.3s;" onmouseover="this.style.color='var(--color-text-primary)'" onmouseout="this.style.color='var(--color-text-secondary)'">FAQ</a></li>
+                        <li><a href="#" onclick="navigate('fees')" style="color: var(--color-text-secondary); text-decoration: none; font-size: 0.9rem; transition: 0.3s;" onmouseover="this.style.color='var(--color-text-primary)'" onmouseout="this.style.color='var(--color-text-secondary)'">Fee Schedule</a></li>
+                        <li><a href="#" onclick="showToast('Legal', 'Privacy Center loading...')" style="color: var(--color-text-secondary); text-decoration: none; font-size: 0.9rem; transition: 0.3s;" onmouseover="this.style.color='var(--color-text-primary)'" onmouseout="this.style.color='var(--color-text-secondary)'">Privacy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em;">Join Alpha</h4>
+                    <p style="color: var(--color-text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Get early access to institutional signals.</p>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="email" placeholder="Email address" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem 1rem; color: #fff; outline: none; flex: 1; font-size: 0.85rem;">
+                        <button class="btn btn-primary btn-sm">Join</button>
+                    </div>
+                </div>
+            </div>
+            <div style="border-top: 1px solid var(--color-border); padding-top: 2rem; display: flex; justify-content: space-between; align-items: center; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 600;">
+                <div>© 2024 GOALIGN ECOSYSTEM. ALL RIGHTS RESERVED.</div>
+                <div style="display: flex; gap: 2rem;">
+                    <span>STATUS: ALL NODES OPERATIONAL</span>
+                    <span>v4.0.0 PREMIUM</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- Scroll Reveal Animation ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        revealObserver.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            // Re-target both .reveal (legacy/hero) and .card-reveal (new)
+            document.querySelectorAll('.reveal, .card-reveal').forEach(el => {
+                revealObserver.observe(el);
+            });
+        });
+    </script>
+</body>
+
+</html>
