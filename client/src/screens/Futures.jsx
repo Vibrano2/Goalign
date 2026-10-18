@@ -1,12 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
+import { toZonedTime } from 'date-fns-tz';
 import useAuthStore from '../store/useAuthStore';
+import { AVAILABLE_SYMBOLS } from '../utils/symbols';
+import { API_BASE_URL } from '../utils/api';
+const FUTURES_SYMBOLS = AVAILABLE_SYMBOLS.filter(sym => sym.endsWith('USDT') || sym.endsWith('PERP') || sym.endsWith('USD'));
 
-const SYMBOL = 'BTCUSDT';
+const INTERVAL = '1'; // Bybit uses '1' instead of '1m'
+
+function timeToTz(originalTime, timeZone) {
+    const zonedDate = toZonedTime(new Date(originalTime * 1000), timeZone);
+    return zonedDate.getTime() / 1000;
+}
 
 const Futures = () => {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
+  const seriesRef = useRef(null);
+  const priceLinesRef = useRef([]);
+  const wsRef = useRef(null);
+  
+  const [symbol, setSymbol] = useState(FUTURES_SYMBOLS.includes('BTCUSDT') ? 'BTCUSDT' : (FUTURES_SYMBOLS[0] || 'BTCUSDT'));
+  const [showSymbolDropdown, setShowSymbolDropdown] = useState(false);
+  
   const [side, setSide] = useState('Long');
   const [leverage, setLeverage] = useState(10);
   const [margin, setMargin] = useState('');
@@ -23,7 +39,7 @@ const Futures = () => {
     if (!user) return;
     try {
       // Fetch Balances
-      const resBal = await fetch(`https://goalign-mrkd.onrender.com/api/wallet/balances/${user.uid}`);
+      const resBal = await fetch(`${API_BASE_URL}/api/wallet/balances/${user.uid}`);
       const dataBal = await resBal.json();
       if (resBal.ok && dataBal.balances) {
         let usdt = 0;
@@ -36,7 +52,7 @@ const Futures = () => {
       }
 
       // Fetch Positions
-      const resPos = await fetch(`https://goalign-mrkd.onrender.com/api/futures/positions/${user.uid}`);
+      const resPos = await fetch(`${API_BASE_URL}/api/futures/positions/${user.uid}`);
       const dataPos = await resPos.json();
       if (resPos.ok && dataPos.positions) {
         setPositions(dataPos.positions);
@@ -70,12 +86,12 @@ const Futures = () => {
     setMessage('');
 
     try {
-      const res = await fetch('https://goalign-mrkd.onrender.com/api/futures/open', {
+      const res = await fetch(`${API_BASE_URL}/api/futures/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user.uid,
-          symbol: SYMBOL,
+          symbol: symbol,
           side: side.toLowerCase(),
           leverage,
           margin: parseFloat(margin)
@@ -99,7 +115,7 @@ const Futures = () => {
 
   const handleClosePosition = async (positionId) => {
     try {
-      const res = await fetch('https://goalign-mrkd.onrender.com/api/futures/close', {
+      const res = await fetch(`${API_BASE_URL}/api/futures/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,57 +141,211 @@ const Futures = () => {
       const chart = createChart(chartContainerRef.current, {
         layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#90E0EF' },
         grid: { vertLines: { color: 'rgba(144, 224, 239, 0.1)' }, horzLines: { color: 'rgba(144, 224, 239, 0.1)' } },
-        timeScale: { timeVisible: true, secondsVisible: false },
-        crosshair: { mode: 0 }
+        timeScale: { timeVisible: true, secondsVisible: false, borderColor: 'rgba(144, 224, 239, 0.2)' },
+        crosshair: { mode: 0 },
+        rightPriceScale: { borderColor: 'rgba(144, 224, 239, 0.2)' }
       });
       chartRef.current = chart;
+      
       const candlestickSeries = chart.addSeries(CandlestickSeries, {
         upColor: '#00B4D8', downColor: '#ef5350', borderVisible: false, wickUpColor: '#00B4D8', wickDownColor: '#ef5350'
       });
+      seriesRef.current = candlestickSeries;
 
-      // Mock historical data
-      const data = [];
-      let time = Math.floor(Date.now() / 1000) - 100 * 60;
-      let price = 65000;
-      for (let i = 0; i < 100; i++) {
-        const volatility = price * 0.001;
-        const open = price + (Math.random() - 0.5) * volatility;
-        const high = open + Math.random() * volatility;
-        const low = open - Math.random() * volatility;
-        const close = open + (Math.random() - 0.5) * volatility;
-        data.push({ time: time + i * 60, open, high, low, close });
-        price = close;
-      }
-      candlestickSeries.setData(data);
+      // Create Tooltip DOM Element
+      const toolTip = document.createElement('div');
+      toolTip.style = `position: absolute; display: none; z-index: 50; pointer-events: none; background: #03045E; border: 1px solid rgba(144, 224, 239, 0.2); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); border-radius: 0.5rem; padding: 0.75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.875rem; min-width: 130px; color: #90E0EF;`;
+      chartContainerRef.current.appendChild(toolTip);
 
-      const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${SYMBOL.toLowerCase()}@ticker`);
+      chart.subscribeCrosshairMove((param) => {
+        if (!param.time || param.point.x < 0 || param.point.x > chartContainerRef.current.clientWidth || param.point.y < 0 || param.point.y > chartContainerRef.current.clientHeight) {
+          toolTip.style.display = 'none';
+          return;
+        }
+
+        const data = param.seriesData.get(seriesRef.current);
+        if (!data) {
+          toolTip.style.display = 'none';
+          return;
+        }
+
+        toolTip.style.display = 'block';
+        const price = data.value !== undefined ? data.value : data.close;
+        const open = data.open !== undefined ? data.open : price;
+        const high = data.high !== undefined ? data.high : price;
+        const low = data.low !== undefined ? data.low : price;
+        
+        toolTip.innerHTML = `
+          <div style="font-weight: bold; color: #fff; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(144, 224, 239, 0.2);">${symbol}</div>
+          <div style="display: flex; justify-content: space-between;"><span>O</span> <span style="color: #fff;">${open.toFixed(2)}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>H</span> <span style="color: #fff;">${high.toFixed(2)}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>L</span> <span style="color: #fff;">${low.toFixed(2)}</span></div>
+          <div style="display: flex; justify-content: space-between; margin-top: 2px;"><span>C</span> <span style="color: ${price >= open ? '#00B4D8' : '#ef5350'}; font-weight: bold;">${price.toFixed(2)}</span></div>
+        `;
+
+        let x = param.point.x + 15;
+        let y = param.point.y + 15;
+        if (x > chartContainerRef.current.clientWidth - 150) x = param.point.x - 150;
+        if (y > chartContainerRef.current.clientHeight - 150) y = param.point.y - 150;
+        
+        toolTip.style.left = x + 'px';
+        toolTip.style.top = y + 'px';
+      });
+
+      // Fetch historical data from Bybit via Vite proxy
+      fetch(`/bybit-api/v5/market/kline?category=linear&symbol=${symbol}&interval=${INTERVAL}&limit=200`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.retCode === 0 && data.result.list) {
+            // Bybit returns newest to oldest, we need oldest to newest
+            const reversedList = [...data.result.list].reverse();
+            const formattedData = reversedList.map(d => {
+              const rawTime = parseInt(d[0]) / 1000;
+              const time = timeToTz(rawTime, 'America/New_York');
+              return {
+                time,
+                open: parseFloat(d[1]),
+                high: parseFloat(d[2]),
+                low: parseFloat(d[3]),
+                close: parseFloat(d[4]),
+              };
+            });
+            candlestickSeries.setData(formattedData);
+            chart.timeScale().fitContent();
+          }
+        });
+
+      // Connect WebSockets for Ticker and Klines via Vite proxy
+      if (wsRef.current) wsRef.current.close();
+      
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/bybit-ws/v5/public/linear`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          "op": "subscribe",
+          "args": [
+            `kline.${INTERVAL}.${symbol}`,
+            `tickers.${symbol}`
+          ]
+        }));
+      };
+
       ws.onmessage = (event) => {
-        const d = JSON.parse(event.data);
-        setTicker({ p: parseFloat(d.c).toFixed(2), c: parseFloat(d.p).toFixed(2), h: parseFloat(d.h).toFixed(2), l: parseFloat(d.l).toFixed(2), v: parseFloat(d.v).toFixed(2) });
+        const payload = JSON.parse(event.data);
+        
+        if (payload.topic === `kline.${INTERVAL}.${symbol}`) {
+          const klines = payload.data;
+          klines.forEach(k => {
+            const rawTime = parseInt(k.start) / 1000;
+            const time = timeToTz(rawTime, 'America/New_York');
+            candlestickSeries.update({
+              time: time,
+              open: parseFloat(k.open),
+              high: parseFloat(k.high),
+              low: parseFloat(k.low),
+              close: parseFloat(k.close),
+            });
+          });
+        }
+        
+        if (payload.topic === `tickers.${symbol}`) {
+          const d = payload.data;
+          setTicker(prev => ({
+            p: d.lastPrice ? parseFloat(d.lastPrice).toFixed(2) : prev.p,
+            c: d.price24hPcnt ? (parseFloat(d.price24hPcnt) * 100).toFixed(2) : prev.c,
+            h: d.highPrice24h ? parseFloat(d.highPrice24h).toFixed(2) : prev.h,
+            l: d.lowPrice24h ? parseFloat(d.lowPrice24h).toFixed(2) : prev.l,
+            v: d.volume24h ? parseFloat(d.volume24h).toFixed(2) : prev.v
+          }));
+        }
       };
 
       return () => {
-        ws.close();
+        if (wsRef.current) wsRef.current.close();
+        if (toolTip && toolTip.parentNode) {
+            toolTip.parentNode.removeChild(toolTip);
+        }
         chart.remove();
+        chartRef.current = null;
+        seriesRef.current = null;
       };
     }
-  }, []);
+  }, [symbol]); // Re-run effect when symbol changes
+
+  // Sync positions to chart lines
+  useEffect(() => {
+      if (!seriesRef.current) return;
+      
+      // Clear previous lines
+      priceLinesRef.current.forEach(line => {
+          seriesRef.current.removePriceLine(line);
+      });
+      priceLinesRef.current = [];
+
+      // Add new lines
+      positions.forEach(p => {
+          const entryLine = seriesRef.current.createPriceLine({
+              price: parseFloat(p.entry_price),
+              color: p.side === 'long' ? '#00B4D8' : '#ef5350',
+              lineWidth: 2,
+              lineStyle: 0,
+              axisLabelVisible: true,
+              title: `Entry (${p.leverage}x)`,
+          });
+          const liqLine = seriesRef.current.createPriceLine({
+              price: parseFloat(p.liquidation_price),
+              color: '#f97316', // orange-500
+              lineWidth: 2,
+              lineStyle: 2, // Dashed
+              axisLabelVisible: true,
+              title: 'Liq',
+          });
+          priceLinesRef.current.push(entryLine, liqLine);
+      });
+  }, [positions]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col pt-16">
       {/* Ticker Header */}
-      <div className="bg-[#03045E] border-b border-white/10 px-4 py-3 flex items-center space-x-6 overflow-x-auto text-sm">
-        <div className="flex items-center space-x-2">
-          <span className="font-extrabold text-white text-lg tracking-wider">{SYMBOL}</span>
-          <span className="bg-accent/20 text-accent px-2 py-0.5 rounded text-xs font-bold border border-accent/30">Perpetual</span>
+      <div className="bg-[#03045E] border-b border-white/10 px-4 py-3 flex items-center space-x-6 text-sm relative z-50 flex-wrap gap-y-2">
+        <div className="relative">
+          <div 
+            className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition group"
+            onClick={() => setShowSymbolDropdown(!showSymbolDropdown)}
+          >
+            <span className="font-extrabold text-white text-lg tracking-wider">{symbol}</span>
+            <svg className={`w-4 h-4 text-gray-400 transition-transform ${showSymbolDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </div>
+          
+          {showSymbolDropdown && (
+              <div className="absolute top-full mt-2 left-0 w-56 bg-[#020344] border border-white/10 rounded-md shadow-2xl z-[100] max-h-96 overflow-y-auto">
+              {FUTURES_SYMBOLS.map(sym => (
+                <div 
+                  key={sym} 
+                  className={`px-4 py-2 cursor-pointer hover:bg-white/10 font-bold transition ${symbol === sym ? 'text-accent bg-white/5' : 'text-white'}`}
+                  onClick={() => {
+                    setSymbol(sym);
+                    setTicker({ p: '0.00', c: '0.00', h: '0.00', l: '0.00', v: '0.00' });
+                    setShowSymbolDropdown(false);
+                  }}
+                >
+                  {sym}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+        <div className="bg-accent/20 text-accent px-2 py-0.5 rounded text-xs font-bold border border-accent/30 shrink-0">Perpetual</div>
+        
         <div>
           <div className="text-gray-400 text-xs">Mark Price</div>
           <div className={`font-mono font-bold ${parseFloat(ticker.c) >= 0 ? 'text-accent' : 'text-red-400'}`}>{ticker.p}</div>
         </div>
         <div>
           <div className="text-gray-400 text-xs">24h Change</div>
-          <div className={`font-mono ${parseFloat(ticker.c) >= 0 ? 'text-accent' : 'text-red-400'}`}>{ticker.c}</div>
+          <div className={`font-mono ${parseFloat(ticker.c) >= 0 ? 'text-accent' : 'text-red-400'}`}>{ticker.c}%</div>
         </div>
         <div>
           <div className="text-gray-400 text-xs">24h High</div>
@@ -271,7 +441,7 @@ const Futures = () => {
               disabled={isLoading}
               className={`w-full py-4 rounded-md font-bold text-white text-lg transition shadow-lg ${side === 'Long' ? 'bg-[#00B4D8] hover:bg-opacity-90 text-[#03045E]' : 'bg-[#ef5350] hover:bg-opacity-90'} disabled:opacity-50`}
             >
-              {isLoading ? 'Processing...' : (side === 'Long' ? `Long ${SYMBOL}` : `Short ${SYMBOL}`)}
+              {isLoading ? 'Processing...' : (side === 'Long' ? `Long ${symbol}` : `Short ${symbol}`)}
             </button>
           </div>
         </div>
@@ -280,7 +450,8 @@ const Futures = () => {
       {/* Positions Dashboard */}
       <div className="h-64 bg-[#020344] border-t border-white/10 p-4 overflow-y-auto">
         <h3 className="text-white font-bold mb-4">Open Positions ({positions.length})</h3>
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto hide-scrollbar">
+          <table className="w-full text-left text-sm min-w-[800px]">
           <thead className="text-gray-400 border-b border-white/10">
             <tr>
               <th className="pb-2 font-normal">Symbol</th>
@@ -337,6 +508,7 @@ const Futures = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

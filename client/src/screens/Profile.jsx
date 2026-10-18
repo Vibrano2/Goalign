@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../utils/api';
 
 const Profile = () => {
   const { user, logout } = useAuthStore();
@@ -9,7 +10,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      fetch(`https://goalign-mrkd.onrender.com/api/kyc/status/${user.uid}`)
+      fetch(`${API_BASE_URL}/api/kyc/status/${user.uid}`)
         .then(res => res.json())
         .then(data => {
           if (data.status) setKycStatus(data.status);
@@ -38,22 +39,34 @@ const Profile = () => {
       <div className="container mx-auto max-w-3xl px-4 -mt-12 relative z-20">
         <div className="bg-white rounded-xl shadow-md border border-blue-100 p-6 mb-6 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${kycStatus === 'verified' ? 'bg-green-100 text-green-500' : 'bg-orange-100 text-orange-500'}`}>
-              {kycStatus === 'verified' ? '✓' : '!'}
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+              kycStatus === 'verified' ? 'bg-green-100 text-green-500' : 
+              kycStatus === 'pending' ? 'bg-orange-100 text-orange-500 animate-pulse' : 
+              kycStatus === 'rejected' ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-500'
+            }`}>
+              {kycStatus === 'verified' ? '✓' : kycStatus === 'pending' ? '⏳' : '!'}
             </div>
             <div>
               <h3 className="font-bold text-primary">Identity Verification (KYC)</h3>
               <p className="text-sm text-secondary">
-                Status: <span className={`font-bold uppercase ${kycStatus === 'verified' ? 'text-green-500' : 'text-orange-500'}`}>{kycStatus}</span>
+                Status: <span className={`font-bold uppercase ${
+                  kycStatus === 'verified' ? 'text-green-500' : 
+                  kycStatus === 'pending' ? 'text-orange-500' : 
+                  kycStatus === 'rejected' ? 'text-red-500' : 'text-gray-500'
+                }`}>{kycStatus}</span>
               </p>
             </div>
           </div>
           {kycStatus !== 'verified' && (
             <button 
               onClick={() => navigate('/kyc')}
-              className="bg-[#00B4D8] text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-opacity-90 transition"
+              className={`px-6 py-2 rounded-lg font-bold shadow transition ${
+                kycStatus === 'pending' 
+                  ? 'bg-orange-100 text-orange-600 hover:bg-orange-200' 
+                  : 'bg-[#00B4D8] text-white hover:bg-opacity-90'
+              }`}
             >
-              Verify Now
+              {kycStatus === 'pending' ? 'Check Status' : 'Verify Now'}
             </button>
           )}
         </div>

@@ -22,3 +22,12 @@ body {
   background-color: #F8FAFC; /* Clean off-white for main body */
   color: var(--color-primary);
 }
+
+/* Hide scrollbar for clean horizontal scrolling areas */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

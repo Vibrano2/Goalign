@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/useAuthStore';
 import { Crown, Diamond, CheckCircle, ShieldAlert } from 'lucide-react';
+import { API_BASE_URL } from '../utils/api';
 
 const VIP = () => {
   const { user } = useAuthStore();
@@ -20,7 +21,7 @@ const VIP = () => {
   const fetchVipStatus = async () => {
     if (!user) return;
     try {
-      const response = await fetch(`/api/vip/status/${user.uid}`);
+      const response = await fetch(`${API_BASE_URL}/api/vip/status/${user.uid}`);
       if (response.ok) {
         const data = await response.json();
         setVipStatus(data);
@@ -47,7 +48,7 @@ const VIP = () => {
     setUpgrading(true);
 
     try {
-      const response = await fetch('/api/vip/upgrade', {
+      const response = await fetch(`${API_BASE_URL}/api/vip/upgrade`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

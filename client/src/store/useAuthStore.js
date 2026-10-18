@@ -1,63 +1,45 @@
 import { create } from 'zustand';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut as firebaseSignOut 
+} from 'firebase/auth';
+import { auth } from '../firebase.js';
+import { API_BASE_URL } from '../utils/api.js';
 
 const useAuthStore = create((set) => ({
   user: null,
-  isAuthenticated: false,
   loading: true,
-  
-  initAuthListener: () => {
-    return onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Prepare Firebase user data
-        const userData = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          emailVerified: user.emailVerified,
-        };
-
-        try {
-          // Sync with our PostgreSQL backend
-          // We use localhost:5000 by default (change in production)
-          const response = await fetch('https://goalign-mrkd.onrender.com/api/auth/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              firebase_uid: user.uid,
-              email: user.email,
-              display_name: user.displayName
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            // Merge PostgreSQL database fields (like vip_level, internal id) with firebase data
-            userData.dbId = data.user.id;
-            userData.vipLevel = data.user.vip_level;
-          }
-        } catch (err) {
-          console.error("Backend sync failed. Is the server running?", err);
-        }
-
-        set({
-          user: userData,
-          isAuthenticated: true,
-          loading: false,
-        });
-      } else {
-        set({
-          user: null,
-          isAuthenticated: false,
-          loading: false,
-        });
-      }
-    });
+  login: (email, password) => {
+    return signInWithEmailAndPassword(auth, email, password);
   },
-
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
-  setLoading: (loading) => set({ loading }),
+  register: (email, password) => {
+    return createUserWithEmailAndPassword(auth, email, password);
+  },
+  logout: () => {
+    return firebaseSignOut(auth);
+  }
 }));
+
+// Setup listener outside React and ensure backend user record exists
+onAuthStateChanged(auth, async (currentUser) => {
+  useAuthStore.setState({ user: currentUser, loading: false });
+  if (currentUser) {
+    try {
+      await fetch(`${API_BASE_URL}/api/auth/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firebase_uid: currentUser.uid,
+          email: currentUser.email,
+          display_name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Trader'
+        })
+      });
+    } catch (err) {
+      console.warn('Background auth sync warning:', err);
+    }
+  }
+});
 
 export default useAuthStore;

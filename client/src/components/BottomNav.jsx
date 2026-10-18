@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, TrendingUp, Activity, PieChart, User } from 'lucide-react';
+import { Home, ArrowLeftRight, Star, PieChart, User } from 'lucide-react';
 
 const BottomNav = () => {
   const location = useLocation();
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
-    { name: 'Trade', path: '/trade', icon: TrendingUp },
-    { name: 'Derivatives', path: '/futures', icon: Activity },
+    { name: 'P2P', path: '/p2p', icon: ArrowLeftRight },
+    { name: 'VIP', path: '/vip', icon: Star },
     { name: 'Wallet', path: '/wallet', icon: PieChart },
     { name: 'Profile', path: '/profile', icon: User },
   ];

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/useAuthStore';
+import { API_BASE_URL } from '../utils/api';
 
 const PRODUCTS = [
   { asset: 'USDT', apy: 12.00, tag: 'High Yield', color: 'text-green-400' },
@@ -18,7 +19,7 @@ const Earn = () => {
     if (!user) return;
     try {
       // Fetch Balances
-      const resBal = await fetch(`https://goalign-mrkd.onrender.com/api/wallet/balances/${user.uid}`);
+      const resBal = await fetch(`${API_BASE_URL}/api/wallet/balances/${user.uid}`);
       const dataBal = await resBal.json();
       if (resBal.ok && dataBal.balances) {
         const balMap = {};
@@ -29,7 +30,7 @@ const Earn = () => {
       }
 
       // Fetch Subscriptions
-      const resSub = await fetch(`https://goalign-mrkd.onrender.com/api/earn/subscriptions/${user.uid}`);
+      const resSub = await fetch(`${API_BASE_URL}/api/earn/subscriptions/${user.uid}`);
       const dataSub = await resSub.json();
       if (resSub.ok && dataSub.subscriptions) {
         setSubscriptions(dataSub.subscriptions);
@@ -53,7 +54,7 @@ const Earn = () => {
     
     setLoading(true);
     try {
-      const res = await fetch('https://goalign-mrkd.onrender.com/api/earn/subscribe', {
+      const res = await fetch(`${API_BASE_URL}/api/earn/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -80,7 +81,7 @@ const Earn = () => {
 
   const handleRedeem = async (stakeId) => {
     try {
-      const res = await fetch('https://goalign-mrkd.onrender.com/api/earn/redeem', {
+      const res = await fetch(`${API_BASE_URL}/api/earn/redeem`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.uid, stake_id: stakeId })

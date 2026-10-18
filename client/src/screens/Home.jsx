@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
+import { Plus, ArrowUp, ArrowRightLeft, Crown } from 'lucide-react';
+import LiveNetworkActivity from '../components/LiveNetworkActivity';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -85,21 +87,56 @@ const Home = () => {
               Experience lightning-fast execution and smart yield strategies powered by decentralized escrow protection.
             </p>
             <button 
-              onClick={() => navigate(user ? '/trade' : '/register')}
-              className="bg-accent text-primary px-8 py-3 rounded-md font-bold text-lg hover:bg-opacity-90 transition shadow-lg"
+              onClick={() => navigate(user ? '/invest' : '/register')}
+              className="bg-accent text-primary px-8 py-3 rounded-md font-bold text-lg hover:bg-opacity-100 hover:shadow-[0_0_20px_rgba(0,180,216,0.4)] hover:-translate-y-0.5 transition-all duration-300 shadow-lg"
             >
-              {user ? 'Trade Now' : 'Get Started'}
+              {user ? 'Invest Now' : 'Get Started'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Market Data Section */}
-      <div className="container mx-auto max-w-6xl px-4 py-12">
-        <h2 className="text-2xl font-bold mb-6">Market Trend</h2>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
-          {/* Controls */}
+      {/* Quick Actions */}
+      <div className="container mx-auto max-w-7xl px-4 -mt-8 relative z-10 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div onClick={() => navigate(user ? '/wallet' : '/login')} className="bg-white rounded-xl shadow-sm border border-blue-50 p-6 flex flex-col items-center justify-center hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 hover:border-blue-100 transition-all duration-300 cursor-pointer group">
+            <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-green-100 transition-all duration-300">
+              <Plus size={28} strokeWidth={2.5} />
+            </div>
+            <span className="font-semibold text-primary transition-colors duration-300">Recharge</span>
+          </div>
+          
+          <div onClick={() => navigate(user ? '/wallet' : '/login')} className="bg-white rounded-xl shadow-sm border border-blue-50 p-6 flex flex-col items-center justify-center hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 hover:border-blue-100 transition-all duration-300 cursor-pointer group">
+            <div className="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-red-100 transition-all duration-300">
+              <ArrowUp size={28} strokeWidth={2.5} />
+            </div>
+            <span className="font-semibold text-primary transition-colors duration-300">Withdraw</span>
+          </div>
+
+          <div onClick={() => navigate(user ? '/transfer' : '/login')} className="bg-white rounded-xl shadow-sm border border-blue-50 p-6 flex flex-col items-center justify-center hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 hover:border-blue-100 transition-all duration-300 cursor-pointer group">
+            <div className="w-14 h-14 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-orange-100 transition-all duration-300">
+              <ArrowRightLeft size={28} strokeWidth={2.5} />
+            </div>
+            <span className="font-semibold text-primary transition-colors duration-300">Transfer</span>
+          </div>
+
+          <div onClick={() => navigate(user ? '/vip' : '/login')} className="bg-white rounded-xl shadow-sm border border-blue-50 p-6 flex flex-col items-center justify-center hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 hover:border-blue-100 transition-all duration-300 cursor-pointer group">
+            <div className="w-14 h-14 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-yellow-100 transition-all duration-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
+              <Crown size={28} strokeWidth={2.5} />
+            </div>
+            <span className="font-semibold text-primary transition-colors duration-300">VIP Plans</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Dashboard Section */}
+      <div className="container mx-auto max-w-7xl px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <h2 className="text-2xl font-bold mb-6">Market Trend</h2>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
+              {/* Controls */}
           <div className="p-4 border-b border-blue-50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-blue-50/30">
             <div className="flex space-x-2">
               {['All', 'Gainers', 'Losers'].map(tab => (
@@ -239,7 +276,15 @@ const Home = () => {
           </div>
         </div>
       </div>
+          
+      {/* Live Network Activity Section */}
+      <div className="lg:col-span-1">
+        <h2 className="text-2xl font-bold mb-6 opacity-0 hidden lg:block">Network</h2>
+        <LiveNetworkActivity />
+      </div>
     </div>
+  </div>
+</div>
   );
 };
 

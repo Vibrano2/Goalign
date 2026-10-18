@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useAuthStore from '../store/useAuthStore';
 import { ChevronRight } from 'lucide-react';
+import { API_BASE_URL } from '../utils/api';
 
 const PLEDGE_PRODUCTS = [
   { asset: 'USDT', apy: 0.18, min: 10 },
@@ -8,12 +9,21 @@ const PLEDGE_PRODUCTS = [
   { asset: 'ETH', apy: 0.06, min: 0.01 }
 ];
 
+export const DEFAULT_QUANTIFY_PLANS = [
+  { id: 1, title: 'USDT Arbitrage 1 day quantitative trading', days: 1, dailyInterest: 0.28, min: 10, max: 100, soldOut: 12 },
+  { id: 2, title: 'USDT Arbitrage 2 days quantitative trading', days: 2, dailyInterest: 0.35, min: 100, max: 500, soldOut: 45 },
+  { id: 3, title: 'USDT Arbitrage 30 days quantitative trading', days: 30, dailyInterest: 0.50, min: 500, max: 1000, soldOut: 78 },
+  { id: 4, title: 'USDT Arbitrage 90 days quantitative trading', days: 90, dailyInterest: 0.80, min: 1000, max: 5000, soldOut: 89 },
+  { id: 5, title: 'USDT Arbitrage 180 days quantitative trading', days: 180, dailyInterest: 1.20, min: 5000, max: 10000, soldOut: 95 },
+  { id: 6, title: 'USDT Arbitrage 360 days quantitative trading', days: 360, dailyInterest: 2.00, min: 10000, max: 50000, soldOut: 98 },
+];
+
 const Invest = () => {
   const { user } = useAuthStore();
   const [activeMainTab, setActiveMainTab] = useState('Quantify');
   const [quantifyFilter, setQuantifyFilter] = useState('All');
   
-  const [quantifyPlans, setQuantifyPlans] = useState([]);
+  const [quantifyPlans, setQuantifyPlans] = useState(DEFAULT_QUANTIFY_PLANS);
   const [balances, setBalances] = useState({});
   const [pledges, setPledges] = useState([]);
   const [pledgeAmounts, setPledgeAmounts] = useState({});
@@ -22,35 +32,55 @@ const Invest = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const fetchData = async () => {
-    if (!user) return;
+  const fetchQuantifyPlans = async () => {
     try {
-      const balRes = await fetch(`https://goalign-mrkd.onrender.com/api/wallet/balances/${user.uid}`);
-      const balData = await balRes.json();
-      if (balRes.ok && balData.balances) {
-        const spots = {};
-        balData.balances.forEach(b => {
-          if (b.account_type === 'spot') {
-            spots[b.asset] = parseFloat(b.available);
-          }
-        });
-        setBalances(spots);
-      }
-
-      const pldRes = await fetch(`https://goalign-mrkd.onrender.com/api/invest/pledges/${user.uid}`);
-      const pldData = await pldRes.json();
-      if (pldRes.ok && pldData.pledges) {
-        setPledges(pldData.pledges);
-      }
-
-      const quantRes = await fetch(`https://goalign-mrkd.onrender.com/api/invest/quantify-plans`);
-      const quantData = await quantRes.json();
-      if (quantRes.ok && quantData.plans) {
-        setQuantifyPlans(quantData.plans);
+      const quantRes = await fetch(`${API_BASE_URL}/api/invest/quantify-plans`);
+      if (quantRes.ok) {
+        const quantData = await quantRes.json();
+        if (quantData && Array.isArray(quantData.plans) && quantData.plans.length > 0) {
+          setQuantifyPlans(quantData.plans);
+        }
       }
     } catch (err) {
-      console.error('Failed to fetch data:', err);
+      // Keep DEFAULT_QUANTIFY_PLANS on network error
     }
+  };
+
+  const fetchUserData = async () => {
+    if (!user) return;
+    try {
+      const balRes = await fetch(`${API_BASE_URL}/api/wallet/balances/${user.uid}`);
+      if (balRes.ok) {
+        const balData = await balRes.json();
+        if (balData.balances) {
+          const spots = {};
+          balData.balances.forEach(b => {
+            if (b.account_type === 'spot') {
+              spots[b.asset] = parseFloat(b.available);
+            }
+          });
+          setBalances(spots);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch wallet balances:', err);
+    }
+
+    try {
+      const pldRes = await fetch(`${API_BASE_URL}/api/invest/pledges/${user.uid}`);
+      if (pldRes.ok) {
+        const pldData = await pldRes.json();
+        if (pldData.pledges) {
+          setPledges(pldData.pledges);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch pledges:', err);
+    }
+  };
+
+  const fetchData = async () => {
+    await Promise.allSettled([fetchQuantifyPlans(), fetchUserData()]);
   };
 
   useEffect(() => {
@@ -73,7 +103,7 @@ const Invest = () => {
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch('https://goalign-mrkd.onrender.com/api/invest/pledge', {
+      const res = await fetch(`${API_BASE_URL}/api/invest/pledge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.uid, asset, amount: parseFloat(amount) })
@@ -84,7 +114,7 @@ const Invest = () => {
         setPledgeAmounts({ ...pledgeAmounts, [asset]: '' });
         fetchData();
       } else {
-        setMessage(data.error || 'Failed to pledge');
+        setMessage(data.error || data.detail || 'Failed to pledge');
       }
     } catch (err) {
       setMessage('Network error');
@@ -98,7 +128,7 @@ const Invest = () => {
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch('https://goalign-mrkd.onrender.com/api/invest/redeem', {
+      const res = await fetch(`${API_BASE_URL}/api/invest/redeem`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.uid, stake_id: stakeId })
@@ -108,7 +138,7 @@ const Invest = () => {
         setMessage(`Redeemed! Earned ${data.earned}`);
         fetchData();
       } else {
-        setMessage(data.error || 'Failed to redeem');
+        setMessage(data.error || data.detail || 'Failed to redeem');
       }
     } catch (err) {
       setMessage('Network error');
@@ -132,7 +162,7 @@ const Invest = () => {
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch('https://goalign-mrkd.onrender.com/api/invest/quantify/buy', {
+      const res = await fetch(`${API_BASE_URL}/api/invest/quantify/buy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ firebaseUid: user.uid, planId: plan.id, amount: parseFloat(amount) })
@@ -143,7 +173,7 @@ const Invest = () => {
         setQuantifyAmounts({ ...quantifyAmounts, [plan.id]: '' });
         fetchData();
       } else {
-        setMessage(data.error || 'Failed to buy plan');
+        setMessage(data.error || data.detail || 'Failed to buy plan');
       }
     } catch (err) {
       setMessage('Network error');

@@ -8,4 +8,23 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/bybit-api': {
+        target: 'https://api.bybit.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/bybit-api/, '')
+      },
+      '/bybit-ws': {
+        target: 'wss://stream.bybit.com',
+        ws: true,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/bybit-ws/, '')
+      }
+    }
+  },
+  optimizeDeps: {
+    force: true,
+    include: ['@sumsub/websdk']
+  }
 })
