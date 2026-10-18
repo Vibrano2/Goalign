@@ -6,10 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:'Goalign Super Admin' }}{% endblock %}</title>
 
-  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <!-- Google Fonts: Poppins, Inter, & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
   <style>
@@ -17,10 +17,19 @@
        GOALIGN ENTERPRISE FINTECH DESIGN SYSTEM (CSS VARIABLES)
        ========================================================================== */
     :root {
-      /* Brand Palette */
-      --primary-navy: #071B3B;
-      --primary-blue: #087CCF;
-      --primary-blue-hover: #0667AC;
+      /* Official Goalign Brand Palette */
+      --color-palette-900: #03045E;
+      --color-palette-700: #0077B6;
+      --color-palette-500: #00B4D8;
+      --color-palette-300: #90E0EF;
+      --color-palette-100: #CAF0F8;
+
+      --primary-navy: #03045E;
+      --primary-blue: #0077B6;
+      --primary-blue-hover: #005F92;
+      --accent-cyan: #00B4D8;
+      --accent-light: #90E0EF;
+      --accent-tint: #CAF0F8;
       --success-green: #10B981;
       --warning-amber: #F59E0B;
       --danger-red: #EF4444;
@@ -28,45 +37,46 @@
       /* Light Theme (Default fallback) */
       --bg-page: #F8FAFC;
       --bg-surface: #FFFFFF;
-      --bg-surface-alt: #F1F5F9;
+      --bg-surface-alt: #F0F9FF;
       --border-color: #E2E8F0;
       --border-color-subtle: #EDF2F7;
-      --text-main: #0F172A;
-      --text-muted: #64748B;
+      --text-main: #03045E;
+      --text-muted: #475569;
       --text-subtle: #94A3B8;
-      --sidebar-bg: #071B3B;
+      --sidebar-bg: #03045E;
       --sidebar-text: #E2E8F0;
-      --sidebar-active-bg: rgba(8, 124, 207, 0.18);
-      --sidebar-active-text: #38BDF8;
-      --card-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
-      --card-shadow-hover: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+      --sidebar-active-bg: rgba(0, 180, 216, 0.16);
+      --sidebar-active-text: #00B4D8;
+      --card-shadow: 0 1px 3px 0 rgba(3, 4, 94, 0.05), 0 1px 2px -1px rgba(3, 4, 94, 0.04);
+      --card-shadow-hover: 0 4px 8px -1px rgba(3, 4, 94, 0.09), 0 2px 4px -2px rgba(3, 4, 94, 0.05);
       --topbar-bg: #FFFFFF;
       --topbar-border: #E2E8F0;
-      --badge-bg: #E2E8F0;
-      --badge-text: #334155;
+      --badge-bg: #CAF0F8;
+      --badge-text: #03045E;
     }
 
     /* Dark Theme */
     [data-theme="dark"] {
-      --bg-page: #0B132B;
-      --bg-surface: #111C38;
-      --bg-surface-alt: #162447;
-      --border-color: #1E2D4E;
-      --border-color-subtle: #192644;
+      --bg-page: #020324;
+      --bg-surface: #070B38;
+      --bg-surface-alt: #0D134A;
+      --border-color: #15226E;
+      --border-color-subtle: #0E1752;
       --text-main: #F8FAFC;
       --text-muted: #94A3B8;
       --text-subtle: #64748B;
-      --sidebar-bg: #07152E;
+      --sidebar-bg: #020320;
       --sidebar-text: #CBD5E1;
-      --sidebar-active-bg: rgba(8, 124, 207, 0.25);
-      --sidebar-active-text: #38BDF8;
-      --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.35);
-      --card-shadow-hover: 0 4px 10px 0 rgba(0, 0, 0, 0.45);
-      --topbar-bg: #111C38;
-      --topbar-border: #1E2D4E;
-      --badge-bg: #1E2D4E;
-      --badge-text: #E2E8F0;
+      --sidebar-active-bg: rgba(0, 180, 216, 0.22);
+      --sidebar-active-text: #00B4D8;
+      --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.45);
+      --card-shadow-hover: 0 4px 12px 0 rgba(0, 0, 0, 0.55);
+      --topbar-bg: #070B38;
+      --topbar-border: #15226E;
+      --badge-bg: #0D134A;
+      --badge-text: #CAF0F8;
     }
+
 
     * {
       box-sizing: border-box;
@@ -76,7 +86,7 @@
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-page);
       color: var(--text-main);
       font-size: 14px;
@@ -124,57 +134,57 @@
     }
 
     .sidebar-header {
-      padding: 18px 20px;
+      padding: 16px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 8px;
     }
 
     .brand-link {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       color: #FFFFFF;
-      font-weight: 700;
-      font-size: 16px;
-      letter-spacing: -0.2px;
       text-decoration: none;
+      min-width: 0;
+      overflow: hidden;
     }
     .brand-link:hover { text-decoration: none; }
 
-    .brand-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      background: var(--primary-blue);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .brand-logo-img {
+      height: 36px;
+      width: auto;
+      max-width: 145px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.25));
+      transition: all 0.25s ease;
+    }
+
+    .brand-admin-tag {
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--primary-blue) 100%);
       color: #FFFFFF;
+      font-size: 10px;
       font-weight: 800;
-      font-size: 17px;
-      box-shadow: 0 2px 8px rgba(8, 124, 207, 0.4);
+      letter-spacing: 0.6px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 6px rgba(0, 180, 216, 0.35);
       flex-shrink: 0;
     }
 
-    .brand-name {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.2;
+    .admin-sidebar.collapsed .brand-admin-tag {
+      display: none;
     }
-    .brand-title {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+    .admin-sidebar.collapsed .brand-logo-img {
+      height: 28px;
+      max-width: 34px;
+      overflow: hidden;
+      object-position: left;
     }
-    .brand-subtitle {
-      font-size: 10px;
-      color: var(--primary-blue);
-      font-weight: 600;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-    }
+
 
     .sidebar-toggle-btn {
       background: transparent;
@@ -626,12 +636,9 @@
        ======================================================================== -->
   <aside class="admin-sidebar" id="goalign-sidebar">
     <div class="sidebar-header">
-      <a href="{% url 'admin:index' %}" class="brand-link">
-        <div class="brand-icon">G</div>
-        <div class="brand-name">
-          <span class="brand-title">GOALIGN</span>
-          <span class="brand-subtitle">Super Admin</span>
-        </div>
+      <a href="{% url 'admin:index' %}" class="brand-link" title="Goalign Super Admin Control Center">
+        <img src="{% static 'logo.svg' %}" alt="Goalign" class="brand-logo-img" />
+        <span class="brand-admin-tag">ADMIN</span>
       </a>
       <button type="button" class="sidebar-toggle-btn" id="sidebar-collapse-toggle" title="Toggle Navigation">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -639,6 +646,7 @@
         </svg>
       </button>
     </div>
+
 
     <nav class="sidebar-nav">
       <!-- DASHBOARD OVERVIEW -->

@@ -12,6 +12,9 @@ for model, model_admin in admin.site._registry.items():
     model_admin.admin_site = super_admin_site
     super_admin_site._registry[model] = model_admin
 
+from django.conf import settings
+from django.conf.urls.static import static
+
 urlpatterns = [
     path('admin/', super_admin_site.urls),
     path('api/health', health_check, name='health_check'),
@@ -20,4 +23,7 @@ urlpatterns = [
     path('api/wallet/', include('apps.wallets.urls')),
     path('api/', include('apps.trading.urls')),
 ]
+
+urlpatterns += static(settings.STATIC_URL, document_root=settings.BASE_DIR / 'static')
+
 

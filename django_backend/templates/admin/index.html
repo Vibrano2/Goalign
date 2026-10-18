@@ -206,9 +206,10 @@
           <p class="chart-subtitle">Daily notional volume executed vs protocol fee generation.</p>
         </div>
         <div class="chart-legend-pills">
-          <span class="legend-pill" style="--pill-color: #087CCF;">Volume ($)</span>
-          <span class="legend-pill" style="--pill-color: #10B981;">Revenue ($)</span>
+          <span class="legend-pill" style="--pill-color: #0077B6;">Volume ($)</span>
+          <span class="legend-pill" style="--pill-color: #00B4D8;">Revenue ($)</span>
         </div>
+
       </div>
       <div class="chart-body">
         <canvas id="volumeRevenueChart"></canvas>
@@ -1015,7 +1016,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const textColor = isDark ? '#94A3B8' : '#64748B';
 
   // Common Chart Defaults
-  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.family = "'Poppins', 'Inter', sans-serif";
   Chart.defaults.color = textColor;
 
   // 1. Trading Volume & Revenue Combined Chart
@@ -1028,7 +1029,7 @@ document.addEventListener("DOMContentLoaded", function () {
         {
           label: 'Volume ($)',
           data: chartsData.volume_data,
-          backgroundColor: '#087CCF',
+          backgroundColor: '#0077B6',
           borderRadius: 4,
           yAxisID: 'y'
         },
@@ -1036,9 +1037,9 @@ document.addEventListener("DOMContentLoaded", function () {
           label: 'Revenue ($)',
           data: chartsData.revenue_data,
           type: 'line',
-          borderColor: '#10B981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          borderWidth: 2,
+          borderColor: '#00B4D8',
+          backgroundColor: 'rgba(0, 180, 216, 0.15)',
+          borderWidth: 2.5,
           tension: 0.3,
           fill: true,
           yAxisID: 'y1'
@@ -1106,8 +1107,8 @@ document.addEventListener("DOMContentLoaded", function () {
       datasets: [{
         label: 'Cumulative Users',
         data: chartsData.user_growth_data,
-        borderColor: '#8B5CF6',
-        backgroundColor: 'rgba(139, 92, 246, 0.12)',
+        borderColor: '#00B4D8',
+        backgroundColor: 'rgba(0, 180, 216, 0.15)',
         borderWidth: 2.5,
         tension: 0.35,
         fill: true,
@@ -1137,7 +1138,7 @@ document.addEventListener("DOMContentLoaded", function () {
           chartsData.kyc_distribution.pending,
           chartsData.kyc_distribution.unverified
         ],
-        backgroundColor: ['#10B981', '#F59E0B', '#64748B'],
+        backgroundColor: ['#10B981', '#F59E0B', '#0077B6'],
         borderWidth: 0,
         hoverOffset: 4
       }]
@@ -1154,6 +1155,7 @@ document.addEventListener("DOMContentLoaded", function () {
       cutout: '70%'
     }
   });
+
 });
 
 // Modal Actions
