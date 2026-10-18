@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: goalign_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-goalign_db}
+      POSTGRES_USER: ${PGUSER:-goalign_user}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-goalign_secure_pwd_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./django_backend/sql/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+      - ./django_backend/sql/01-ledger-system.sql:/docker-entrypoint-initdb.d/01-ledger.sql:ro
+      - ./django_backend/sql/02-phase1-1-hardening.sql:/docker-entrypoint-initdb.d/02-hardening.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-goalign_user} -d ${PGDATABASE:-goalign_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./django_backend
+      dockerfile: Dockerfile
+    container_name: goalign_django_api
+    restart: always
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - SECRET_KEY=${SECRET_KEY:-goalign-prod-super-secret-key-change-in-env}
+      - DEBUG=False
+      - PGDATABASE=${PGDATABASE:-goalign_db}
+      - PGUSER=${PGUSER:-goalign_user}
+      - PGPASSWORD=${PGPASSWORD:-goalign_secure_pwd_2026}
+      - PGHOST=db
+      - PGPORT=5432
+      - CORS_ALLOW_ALL_ORIGINS=True
+      - ENABLE_MOCK_FINANCE=False
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: goalign_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

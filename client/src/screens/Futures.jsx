@@ -218,8 +218,7 @@ const Futures = () => {
       // Connect WebSockets for Ticker and Klines via Vite proxy
       if (wsRef.current) wsRef.current.close();
       
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}/bybit-ws/v5/public/linear`);
+      const ws = new WebSocket('wss://stream.bybit.com/v5/public/linear');
       wsRef.current = ws;
 
       ws.onopen = () => {
