@@ -1,0 +1,213 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block breadcrumbs %}
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Withdrawal Approvals Queue</span>
+{% endblock %}
+
+{% block content %}
+<div class="queue-page-container">
+
+  <!-- Queue Header -->
+  <div class="queue-header-row">
+    <div>
+      <h1 class="queue-title">Treasury Withdrawal Review Queue</h1>
+      <p class="queue-subtitle">Authorize hot-wallet payouts or return funds to user balances via atomic ledger refund.</p>
+    </div>
+
+    <!-- Filter Pills -->
+    <div class="queue-filter-group">
+      <a href="?status=pending" class="filter-pill {% if status_filter == 'pending' %}active{% endif %}">
+        Pending ({{ pending_count }})
+      </a>
+      <a href="?status=completed" class="filter-pill {% if status_filter == 'completed' %}active{% endif %}">
+        Completed ({{ completed_count }})
+      </a>
+      <a href="?status=rejected" class="filter-pill {% if status_filter == 'rejected' %}active{% endif %}">
+        Rejected ({{ rejected_count }})
+      </a>
+      <a href="?status=all" class="filter-pill {% if status_filter == 'all' %}active{% endif %}">
+        All Payouts
+      </a>
+    </div>
+  </div>
+
+  <!-- Withdrawals Table -->
+  <div class="fintech-card">
+    <div class="table-wrapper">
+      <table class="fintech-table">
+        <thead>
+          <tr>
+            <th>Withdrawal UUID</th>
+            <th>Beneficiary User</th>
+            <th>Asset / Network</th>
+            <th>Amount</th>
+            <th>Destination Address</th>
+            <th>TxID / Provider Ref</th>
+            <th>Status</th>
+            <th>Created At</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for wd in withdrawals %}
+            <tr>
+              <td>
+                <span class="hash-monospace" title="{{ wd.withdrawal_uuid }}">{{ wd.withdrawal_uuid|slice:":12" }}...</span>
+              </td>
+              <td>
+                <div class="cell-user">
+                  <span class="user-fullname">{{ wd.user.email }}</span>
+                  <span class="hash-monospace">UID: {{ wd.user.firebase_uid|slice:":10" }}...</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-info">{{ wd.asset }}</span>
+                <span class="badge badge-neutral">{{ wd.network }}</span>
+              </td>
+              <td>
+                <span class="amount-val" style="font-size: 13px;">{{ wd.amount }}</span>
+              </td>
+              <td>
+                <span class="hash-monospace" title="{{ wd.address }}">{{ wd.address|slice:":12" }}...{{ wd.address|slice:"-6:" }}</span>
+              </td>
+              <td>
+                {% if wd.provider_txid %}
+                  <span class="hash-monospace" style="color: var(--primary-blue);" title="{{ wd.provider_txid }}">{{ wd.provider_txid|slice:":14" }}...</span>
+                {% else %}
+                  <span style="color: var(--text-subtle);">-</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if wd.status == 'completed' %}
+                  <span class="badge badge-success">COMPLETED</span>
+                {% elif wd.status == 'pending' %}
+                  <span class="badge badge-warning">PENDING</span>
+                {% elif wd.status == 'rejected' %}
+                  <span class="badge badge-danger">REJECTED</span>
+                {% else %}
+                  <span class="badge badge-neutral">{{ wd.status|upper }}</span>
+                {% endif %}
+              </td>
+              <td>{{ wd.created_at|date:"Y-m-d H:i" }}</td>
+              <td style="text-align: right;">
+                {% if wd.status == 'pending' %}
+                  <div class="btn-group-sm" style="justify-content: flex-end;">
+                    <form action="{% url 'admin:api_withdrawal_action' %}" method="POST" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="withdrawal_uuid" value="{{ wd.withdrawal_uuid }}">
+                      <input type="hidden" name="action" value="approve">
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="btn-sm success" onclick="return confirm('Authorize disbursement of {{ wd.amount }} {{ wd.asset }} to {{ wd.address }}?')">Disburse</button>
+                    </form>
+                    <button type="button" class="btn-sm danger" onclick="openRejectModal('{{ wd.withdrawal_uuid }}', '{{ wd.amount }} {{ wd.asset }} ({{ wd.user.email }})')">Reject & Refund</button>
+                  </div>
+                {% else %}
+                  <a href="{% url 'admin:audit_investigate' wd.withdrawal_uuid %}" class="btn-sm info">Audit</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 36px; color: var(--text-muted);">
+                <div class="empty-state">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <p>No withdrawal requests found matching this filter.</p>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Rejection Modal -->
+<div class="fintech-modal-overlay" id="reject-modal">
+  <div class="fintech-modal-card">
+    <h3 style="font-size: 16px; font-weight: 700; color: var(--danger-red); margin-bottom: 8px;">Reject Withdrawal Disbursement</h3>
+    <p id="modal-payout-label" style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">This action will immediately unlock and refund the funds to the user's spot balance via an immutable double-entry ledger refund.</p>
+
+    <form method="POST" action="{% url 'admin:api_withdrawal_action' %}">
+      {% csrf_token %}
+      <input type="hidden" name="withdrawal_uuid" id="modal-wd-id" value="">
+      <input type="hidden" name="action" value="reject">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">Operational Rejection Reason</label>
+        <textarea name="reason" rows="3" required placeholder="e.g. Unverified destination address / Suspicious activity flag / Incorrect network..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-surface-alt); color: var(--text-main); font-size: 13px; font-family: inherit;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-fintech btn-fintech-secondary" onclick="closeRejectModal()">Cancel</button>
+        <button type="submit" class="btn-fintech btn-fintech-danger">Confirm Rejection & Refund</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .queue-page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  .queue-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .queue-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+  .queue-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .queue-filter-group {
+    display: flex;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .filter-pill {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .filter-pill:hover {
+    color: var(--text-main);
+    text-decoration: none;
+  }
+  .filter-pill.active {
+    background: var(--primary-blue);
+    color: #FFFFFF;
+  }
+</style>
+
+<script>
+function openRejectModal(wdUuid, label) {
+  document.getElementById('modal-wd-id').value = wdUuid;
+  document.getElementById('modal-payout-label').innerText = "Disbursement: " + label;
+  document.getElementById('reject-modal').classList.add('open');
+}
+function closeRejectModal() {
+  document.getElementById('reject-modal').classList.remove('open');
+}
+</script>
+{% endblock %}

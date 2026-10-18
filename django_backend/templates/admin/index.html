@@ -1,0 +1,1186 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="dashboard-container">
+
+  <!-- ========================================================================
+       TOP HEADER & QUICK STATS BAR
+       ======================================================================== -->
+  <div class="dashboard-header">
+    <div class="dashboard-title-group">
+      <h1 class="dashboard-title">Financial Control Center</h1>
+      <p class="dashboard-subtitle">Real-time ledger reconciliation, trading engine metrics, and operational review queues.</p>
+    </div>
+    <div class="dashboard-header-actions">
+      <div class="timeframe-selector">
+        <button type="button" class="timeframe-pill active" data-days="7">7D</button>
+        <button type="button" class="timeframe-pill" data-days="30">30D</button>
+        <button type="button" class="timeframe-pill" data-days="90">90D</button>
+      </div>
+      <a href="{% url 'admin:kyc_queue' %}" class="btn-fintech btn-fintech-secondary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>
+        </svg>
+        KYC Queue ({{ metrics.pending_kyc_count }})
+      </a>
+      <a href="{% url 'admin:withdrawals_queue' %}" class="btn-fintech btn-fintech-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        Withdrawal Queue ({{ metrics.pending_wds_count }})
+      </a>
+    </div>
+  </div>
+
+  <!-- Operational Alerts (if any pending critical items) -->
+  {% if operational_alerts %}
+  <div class="alerts-stream">
+    {% for alert in operational_alerts %}
+      <div class="alert-card alert-{{ alert.level }}">
+        <div class="alert-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="alert-content">
+          <span class="alert-heading">{{ alert.title }}</span>
+          <span class="alert-desc">{{ alert.desc }}</span>
+        </div>
+        <a href="{{ alert.link }}" class="alert-action-btn">Resolve Now &rarr;</a>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ========================================================================
+       THE 8 FINTECH KPI CARDS
+       ======================================================================== -->
+  <div class="kpi-grid">
+    <!-- 1. Total Registered Users -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-label">Total Registered Users</span>
+        <span class="kpi-icon-pill blue">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </span>
+      </div>
+      <div class="kpi-value">{{ metrics.total_users|default:"0" }}</div>
+      <div class="kpi-meta">
+        <span class="kpi-badge positive">+{{ metrics.users_30d }}</span>
+        <span class="kpi-subtext">Past 30 days (All-Time Accts)</span>
+      </div>
+      <div class="kpi-definition">Calculation: GoalignAccount.count()</div>
+    </div>
+
+    <!-- 2. Active Users & Traders -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-label">Active Traders (30D)</span>
+        <span class="kpi-icon-pill green">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </span>
+      </div>
+      <div class="kpi-value">{{ metrics.active_traders|default:"0" }}</div>
+      <div class="kpi-meta">
+        <span class="kpi-badge neutral">30-Day Window</span>
+        <span class="kpi-subtext">Active order book participants</span>
+      </div>
+      <div class="kpi-definition">Calculation: Unique users with orders/trades in 30d</div>
+    </div>
+
+    <!-- 3. Total Trading Volume -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-label">Total Trading Volume</span>
+        <span class="kpi-icon-pill purple">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </span>
+      </div>
+      <div class="kpi-value">${{ metrics.total_volume|default:"0.00" }}</div>
+      <div class="kpi-meta">
+        <span class="kpi-badge positive">24h: ${{ metrics.vol_24h }}</span>
+        <span class="kpi-subtext">Aggregated USD Notional</span>
+      </div>
+      <div class="kpi-definition">Calculation: &Sigma;(amount &times; price) on filled trades</div>
+    </div>
+
+    <!-- 4. Total Deposits & Withdrawals -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-label">Deposits vs Withdrawals</span>
+        <span class="kpi-icon-pill emerald">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="21"/></svg>
+        </span>
+      </div>
+      <div class="kpi-value">${{ metrics.total_deposits }} / ${{ metrics.total_withdrawals }}</div>
+      <div class="kpi-meta">
+        <span class="kpi-badge info">Inflow / Outflow</span>
+        <span class="kpi-subtext">Double-entry verified flows</span>
+      </div>
+      <div class="kpi-definition">Calculation: System ledger deposit debits vs completed payouts</div>
+    </div>
+
+    <!-- 5. Pending Withdrawal Requests -->
+    <div class="kpi-card {% if metrics.pending_wds_count > 0 %}border-warning{% endif %}">
+      <div class="kpi-header">
+        <span class="kpi-label">Pending Withdrawals</span>
+        <span class="kpi-icon-pill amber">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </span>
+      </div>
+      <div class="kpi-value">{{ metrics.pending_wds_count }} <span class="kpi-subval">(${{ metrics.pending_wds_amount }})</span></div>
+      <div class="kpi-meta">
+        {% if metrics.pending_wds_count > 0 %}
+          <a href="{% url 'admin:withdrawals_queue' %}" class="kpi-action-link">Review Queue &rarr;</a>
+        {% else %}
+          <span class="kpi-badge positive">All Clear</span>
+        {% endif %}
+        <span class="kpi-subtext">USDT Value</span>
+      </div>
+      <div class="kpi-definition">Calculation: WithdrawalRequest.filter(status='pending')</div>
+    </div>
+
+    <!-- 6. Pending KYC Applications -->
+    <div class="kpi-card {% if metrics.pending_kyc_count > 0 %}border-info{% endif %}">
+      <div class="kpi-header">
+        <span class="kpi-label">Pending KYC Submissions</span>
+        <span class="kpi-icon-pill cyan">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+        </span>
+      </div>
+      <div class="kpi-value">{{ metrics.pending_kyc_count }}</div>
+      <div class="kpi-meta">
+        {% if metrics.pending_kyc_count > 0 %}
+          <a href="{% url 'admin:kyc_queue' %}" class="kpi-action-link">Review Applicants &rarr;</a>
+        {% else %}
+          <span class="kpi-badge positive">Zero Backlog</span>
+        {% endif %}
+        <span class="kpi-subtext">of {{ metrics.total_kyc_submissions }} total</span>
+      </div>
+      <div class="kpi-definition">Calculation: GoalignAccount.filter(kyc_status='pending')</div>
+    </div>
+
+    <!-- 7. Platform Revenue -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-label">Platform Revenue (Fees)</span>
+        <span class="kpi-icon-pill green">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </span>
+      </div>
+      <div class="kpi-value">${{ metrics.platform_revenue|default:"0.00" }}</div>
+      <div class="kpi-meta">
+        <span class="kpi-badge positive">Protocol Retained</span>
+        <span class="kpi-subtext">USDT Accumulated</span>
+      </div>
+      <div class="kpi-definition">Calculation: &Sigma;(fee) collected across all trades</div>
+    </div>
+
+    <!-- 8. Open Orders & Active Positions -->
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-label">Open Orders & Positions</span>
+        <span class="kpi-icon-pill blue">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        </span>
+      </div>
+      <div class="kpi-value">{{ metrics.open_orders }} / {{ metrics.active_positions }}</div>
+      <div class="kpi-meta">
+        <span class="kpi-badge neutral">{{ metrics.total_risk_exposure }} Exposure Units</span>
+        <span class="kpi-subtext">Live engine state</span>
+      </div>
+      <div class="kpi-definition">Calculation: Order(status='open') + Position(status='open')</div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       ANALYTICS CHARTS SECTION
+       ======================================================================== -->
+  <div class="charts-section-grid">
+    <!-- Trading Volume & Revenue Chart -->
+    <div class="chart-card chart-large">
+      <div class="chart-header">
+        <div>
+          <h2 class="chart-title">Trading Volume & Platform Revenue</h2>
+          <p class="chart-subtitle">Daily notional volume executed vs protocol fee generation.</p>
+        </div>
+        <div class="chart-legend-pills">
+          <span class="legend-pill" style="--pill-color: #087CCF;">Volume ($)</span>
+          <span class="legend-pill" style="--pill-color: #10B981;">Revenue ($)</span>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="volumeRevenueChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Deposits vs Withdrawals Flow Chart -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <h2 class="chart-title">Treasury Flow (Inflow vs Outflow)</h2>
+          <p class="chart-subtitle">Daily deposits vs processed withdrawals.</p>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="flowChart"></canvas>
+      </div>
+    </div>
+
+    <!-- User Growth & Adoption -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <h2 class="chart-title">User Base Growth</h2>
+          <p class="chart-subtitle">Cumulative registered accounts.</p>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="userGrowthChart"></canvas>
+      </div>
+    </div>
+
+    <!-- KYC Verification Breakdown -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <h2 class="chart-title">KYC Verification Status</h2>
+          <p class="chart-subtitle">Distribution across all registered accounts.</p>
+        </div>
+      </div>
+      <div class="chart-body" style="position: relative; max-height: 240px; display: flex; justify-content: center;">
+        <canvas id="kycDonutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       OPERATIONAL ACTION QUEUES (KYC & WITHDRAWALS)
+       ======================================================================== -->
+  <div class="operational-grid">
+    <!-- KYC Queue Drawer -->
+    <div class="fintech-card">
+      <div class="card-header-row">
+        <div>
+          <h3 class="card-heading">Pending KYC Verifications</h3>
+          <p class="card-caption">Review user credentials and approve trading tier access.</p>
+        </div>
+        <a href="{% url 'admin:kyc_queue' %}" class="btn-fintech btn-fintech-secondary" style="font-size: 12px; padding: 4px 10px;">View All ({{ metrics.pending_kyc_count }})</a>
+      </div>
+
+      {% if pending_kyc_list %}
+        <div class="table-wrapper">
+          <table class="fintech-table">
+            <thead>
+              <tr>
+                <th>Applicant</th>
+                <th>ID Type</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for kyc in pending_kyc_list %}
+                <tr>
+                  <td>
+                    <div class="cell-user">
+                      <span class="user-fullname">{{ kyc.full_name }}</span>
+                      <span class="user-email-sub">{{ kyc.user.email }}</span>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-neutral">{{ kyc.id_type|upper }}</span></td>
+                  <td>{{ kyc.created_at|date:"M d, H:i" }}</td>
+                  <td>
+                    <div class="btn-group-sm">
+                      <form action="{% url 'admin:api_kyc_action' %}" method="POST" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="application_id" value="{{ kyc.id }}">
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="next" value="/admin/">
+                        <button type="submit" class="btn-sm success" title="Approve Applicant">Approve</button>
+                      </form>
+                      <button type="button" class="btn-sm danger" onclick="openRejectModal('kyc', '{{ kyc.id }}', '{{ kyc.user.email }}')">Reject</button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <p>All KYC applications have been reviewed and resolved.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Withdrawal Approvals Drawer -->
+    <div class="fintech-card">
+      <div class="card-header-row">
+        <div>
+          <h3 class="card-heading">Pending Withdrawal Approvals</h3>
+          <p class="card-caption">Dual authorization required for treasury disbursements.</p>
+        </div>
+        <a href="{% url 'admin:withdrawals_queue' %}" class="btn-fintech btn-fintech-secondary" style="font-size: 12px; padding: 4px 10px;">View All ({{ metrics.pending_wds_count }})</a>
+      </div>
+
+      {% if pending_withdrawals_list %}
+        <div class="table-wrapper">
+          <table class="fintech-table">
+            <thead>
+              <tr>
+                <th>User / Destination</th>
+                <th>Asset / Network</th>
+                <th>Amount</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for wd in pending_withdrawals_list %}
+                <tr>
+                  <td>
+                    <div class="cell-user">
+                      <span class="user-fullname">{{ wd.user.email }}</span>
+                      <span class="hash-monospace" title="{{ wd.address }}">{{ wd.address|slice:":10" }}...{{ wd.address|slice:"-6:" }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-info">{{ wd.asset }}</span>
+                    <span class="badge badge-neutral">{{ wd.network }}</span>
+                  </td>
+                  <td>
+                    <span class="amount-val">{{ wd.amount }}</span>
+                  </td>
+                  <td>
+                    <div class="btn-group-sm">
+                      <form action="{% url 'admin:api_withdrawal_action' %}" method="POST" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="withdrawal_uuid" value="{{ wd.withdrawal_uuid }}">
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="next" value="/admin/">
+                        <button type="submit" class="btn-sm success" onclick="return confirm('Confirm disbursement of {{ wd.amount }} {{ wd.asset }} to {{ wd.address }}?')">Disburse</button>
+                      </form>
+                      <button type="button" class="btn-sm danger" onclick="openRejectModal('withdrawal', '{{ wd.withdrawal_uuid }}', '{{ wd.amount }} {{ wd.asset }}')">Reject</button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <p>No pending withdrawal disbursements awaiting operator action.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       RECENT ACTIVITY & LEDGER RECONCILIATION STREAM
+       ======================================================================== -->
+  <div class="activity-section-grid">
+    <!-- Recent Ledger Transactions -->
+    <div class="fintech-card">
+      <div class="card-header-row">
+        <div>
+          <h3 class="card-heading">Immutable Financial Ledger Stream</h3>
+          <p class="card-caption">Double-entry verified balance movements.</p>
+        </div>
+        <a href="/admin/ledger/ledgertransaction/" class="btn-fintech btn-fintech-secondary" style="font-size: 12px; padding: 4px 10px;">Ledger Explorer</a>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="fintech-table">
+          <thead>
+            <tr>
+              <th>Reference ID</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Timestamp</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in recent_ledger_txs %}
+              <tr>
+                <td>
+                  <span class="hash-monospace" title="{{ tx.reference_id }}">{{ tx.reference_id|slice:":18" }}...</span>
+                </td>
+                <td><span class="badge badge-neutral">{{ tx.transaction_type }}</span></td>
+                <td>
+                  {% if tx.status == 'posted' %}
+                    <span class="badge badge-success">POSTED</span>
+                  {% else %}
+                    <span class="badge badge-warning">{{ tx.status|upper }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ tx.created_at|date:"M d, H:i:s" }}</td>
+                <td>
+                  <a href="{% url 'admin:audit_investigate' tx.reference_id %}" class="btn-sm info">Investigate</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">No ledger transactions recorded yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent Audit Logs -->
+    <div class="fintech-card">
+      <div class="card-header-row">
+        <div>
+          <h3 class="card-heading">Privileged Security Audit Stream</h3>
+          <p class="card-caption">All administrative mutations and staff actions.</p>
+        </div>
+        <a href="/admin/audit/auditlog/" class="btn-fintech btn-fintech-secondary" style="font-size: 12px; padding: 4px 10px;">All Audit Logs</a>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="fintech-table">
+          <thead>
+            <tr>
+              <th>Actor</th>
+              <th>Action</th>
+              <th>Target</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in recent_audit_logs %}
+              <tr>
+                <td>
+                  <span style="font-weight: 600; color: var(--text-main);">{{ log.actor.username|default:"System" }}</span>
+                </td>
+                <td><span class="badge badge-neutral">{{ log.action }}</span></td>
+                <td>
+                  <span class="hash-monospace">{{ log.target_type }}: {{ log.target_identifier|slice:":10" }}</span>
+                </td>
+                <td>{{ log.timestamp|date:"M d, H:i:s" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" style="text-align:center; padding: 20px; color: var(--text-muted);">No administrative actions logged yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       ADMINISTRATION MODULES SUITE DIRECTORY
+       ======================================================================== -->
+  <div class="modules-suite-section">
+    <h2 class="section-title">Administration Modules</h2>
+    <p class="section-subtitle">Direct access to core model repositories with role-based access control.</p>
+
+    <div class="suite-grid">
+      {% for app in app_list %}
+        <div class="suite-card">
+          <div class="suite-card-header">
+            <h3 class="suite-title">{{ app.name }}</h3>
+          </div>
+          <div class="suite-models-list">
+            {% for model in app.models %}
+              <div class="suite-model-item">
+                <a href="{{ model.admin_url }}" class="suite-model-link">{{ model.name }}</a>
+                {% if model.add_url %}
+                  <a href="{{ model.add_url }}" class="suite-add-btn" title="Add {{ model.name }}">+ Add</a>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ========================================================================
+     REJECTION REASON MODAL (KYC / WITHDRAWALS)
+     ======================================================================== -->
+<div class="fintech-modal-overlay" id="reject-modal">
+  <div class="fintech-modal-card">
+    <h3 id="modal-title" style="font-size: 16px; font-weight: 700; color: var(--danger-red); margin-bottom: 8px;">Reject Application</h3>
+    <p id="modal-subtitle" style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Please state the operational reason for rejection. This will be logged in the immutable audit trail.</p>
+
+    <form id="modal-reject-form" method="POST" action="">
+      {% csrf_token %}
+      <input type="hidden" name="application_id" id="modal-app-id" value="">
+      <input type="hidden" name="withdrawal_uuid" id="modal-wd-id" value="">
+      <input type="hidden" name="action" value="reject">
+      <input type="hidden" name="next" value="/admin/">
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">Rejection Reason</label>
+        <textarea name="reason" rows="3" required placeholder="e.g. Expired ID card / Suspicious withdrawal IP / Ledger mismatch..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-surface-alt); color: var(--text-main); font-size: 13px; font-family: inherit;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-fintech btn-fintech-secondary" onclick="closeRejectModal()">Cancel</button>
+        <button type="submit" class="btn-fintech btn-fintech-danger">Confirm Rejection</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================================================
+     INLINE STYLES FOR FINTECH DASHBOARD COMPONENTS
+     ======================================================================== -->
+<style>
+  .dashboard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  .dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .dashboard-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.5px;
+  }
+  .dashboard-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .dashboard-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .timeframe-selector {
+    display: flex;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .timeframe-pill {
+    background: transparent;
+    border: none;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .timeframe-pill.active {
+    background: var(--primary-blue);
+    color: #FFFFFF;
+  }
+
+  /* Alerts Stream */
+  .alerts-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .alert-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 18px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+  }
+  .alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #D97706;
+  }
+  [data-theme="dark"] .alert-warning { color: #FBBF24; }
+  .alert-info {
+    background: rgba(8, 124, 207, 0.1);
+    border-color: rgba(8, 124, 207, 0.3);
+    color: #0284C7;
+  }
+  [data-theme="dark"] .alert-info { color: #38BDF8; }
+  .alert-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+  .alert-heading {
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .alert-desc {
+    font-size: 12px;
+    opacity: 0.9;
+  }
+  .alert-action-btn {
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: underline;
+    color: inherit;
+  }
+
+  /* 8 KPI Cards Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 1200px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+  }
+
+  .kpi-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover);
+  }
+  .kpi-card.border-warning {
+    border-color: var(--warning-amber);
+  }
+  .kpi-card.border-info {
+    border-color: var(--primary-blue);
+  }
+
+  .kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .kpi-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .kpi-icon-pill {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .kpi-icon-pill.blue { background: rgba(8, 124, 207, 0.15); color: #087CCF; }
+  .kpi-icon-pill.green { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+  .kpi-icon-pill.purple { background: rgba(139, 92, 246, 0.15); color: #8B5CF6; }
+  .kpi-icon-pill.emerald { background: rgba(5, 150, 105, 0.15); color: #059669; }
+  .kpi-icon-pill.amber { background: rgba(245, 158, 11, 0.15); color: #F59E0B; }
+  .kpi-icon-pill.cyan { background: rgba(6, 182, 212, 0.15); color: #06B6D4; }
+
+  .kpi-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.4px;
+    font-family: 'Inter', sans-serif;
+  }
+  .kpi-subval {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .kpi-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .kpi-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .kpi-badge.positive { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+  .kpi-badge.info { background: rgba(8, 124, 207, 0.15); color: #087CCF; }
+  .kpi-badge.neutral { background: var(--badge-bg); color: var(--text-muted); }
+  .kpi-subtext {
+    color: var(--text-muted);
+  }
+  .kpi-action-link {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary-blue);
+    text-decoration: underline;
+  }
+
+  .kpi-definition {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-subtle);
+    padding-top: 6px;
+    border-top: 1px dashed var(--border-color);
+  }
+
+  /* Charts Section Grid */
+  .charts-section-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 1024px) {
+    .charts-section-grid { grid-template-columns: 1fr; }
+  }
+
+  .chart-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .chart-card.chart-large {
+    grid-column: span 1;
+  }
+  .chart-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .chart-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .chart-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .chart-legend-pills {
+    display: flex;
+    gap: 8px;
+  }
+  .legend-pill {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .legend-pill::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background-color: var(--pill-color);
+  }
+  .chart-body {
+    width: 100%;
+    min-height: 220px;
+  }
+
+  /* Operational & Activity Grids */
+  .operational-grid, .activity-section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 1024px) {
+    .operational-grid, .activity-section-grid { grid-template-columns: 1fr; }
+  }
+
+  .fintech-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .card-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .card-heading {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .card-caption {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+  .fintech-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .fintech-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+  .fintech-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color-subtle);
+    color: var(--text-main);
+    vertical-align: middle;
+  }
+  .fintech-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .cell-user {
+    display: flex;
+    flex-direction: column;
+  }
+  .user-fullname {
+    font-weight: 600;
+    color: var(--text-main);
+  }
+  .user-email-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .hash-monospace {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .amount-val {
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-main);
+  }
+
+  .btn-group-sm {
+    display: flex;
+    gap: 6px;
+  }
+  .btn-sm {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn-sm.success { background: rgba(16, 185, 129, 0.15); color: #10B981; border-color: rgba(16, 185, 129, 0.3); }
+  .btn-sm.success:hover { background: #10B981; color: white; }
+  .btn-sm.danger { background: rgba(239, 68, 68, 0.15); color: #EF4444; border-color: rgba(239, 68, 68, 0.3); }
+  .btn-sm.danger:hover { background: #EF4444; color: white; }
+  .btn-sm.info { background: rgba(8, 124, 207, 0.15); color: #087CCF; border-color: rgba(8, 124, 207, 0.3); text-decoration: none; }
+  .btn-sm.info:hover { background: #087CCF; color: white; text-decoration: none; }
+
+  .empty-state {
+    padding: 30px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Suite Grid */
+  .modules-suite-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+  .section-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .suite-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 900px) {
+    .suite-grid { grid-template-columns: 1fr; }
+  }
+
+  .suite-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .suite-card-header {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .suite-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--primary-blue);
+  }
+  .suite-models-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .suite-model-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 4px 0;
+  }
+  .suite-model-link {
+    color: var(--text-main);
+    font-weight: 500;
+  }
+  .suite-model-link:hover {
+    color: var(--primary-blue);
+  }
+  .suite-add-btn {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-decoration: none;
+  }
+  .suite-add-btn:hover {
+    color: var(--primary-blue);
+    border-color: var(--primary-blue);
+  }
+</style>
+
+<!-- ========================================================================
+     CHART.JS SCRIPTS & INTERACTION LOGIC
+     ======================================================================== -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const chartsData = {{ charts_data_json|safe }};
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+  const textColor = isDark ? '#94A3B8' : '#64748B';
+
+  // Common Chart Defaults
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = textColor;
+
+  // 1. Trading Volume & Revenue Combined Chart
+  const ctxVolRev = document.getElementById('volumeRevenueChart').getContext('2d');
+  new Chart(ctxVolRev, {
+    type: 'bar',
+    data: {
+      labels: chartsData.labels,
+      datasets: [
+        {
+          label: 'Volume ($)',
+          data: chartsData.volume_data,
+          backgroundColor: '#087CCF',
+          borderRadius: 4,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Revenue ($)',
+          data: chartsData.revenue_data,
+          type: 'line',
+          borderColor: '#10B981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor } },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: v => '$' + v.toLocaleString() },
+          position: 'left'
+        },
+        y1: {
+          grid: { display: false },
+          ticks: { color: textColor, callback: v => '$' + v.toLocaleString() },
+          position: 'right'
+        }
+      }
+    }
+  });
+
+  // 2. Treasury Flow (Inflow vs Outflow)
+  const ctxFlow = document.getElementById('flowChart').getContext('2d');
+  new Chart(ctxFlow, {
+    type: 'bar',
+    data: {
+      labels: chartsData.labels,
+      datasets: [
+        {
+          label: 'Deposits ($)',
+          data: chartsData.deposit_data,
+          backgroundColor: '#10B981',
+          borderRadius: 4
+        },
+        {
+          label: 'Withdrawals ($)',
+          data: chartsData.withdrawal_data,
+          backgroundColor: '#EF4444',
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => '$' + v.toLocaleString() } }
+      }
+    }
+  });
+
+  // 3. User Growth Chart
+  const ctxUsers = document.getElementById('userGrowthChart').getContext('2d');
+  new Chart(ctxUsers, {
+    type: 'line',
+    data: {
+      labels: chartsData.labels,
+      datasets: [{
+        label: 'Cumulative Users',
+        data: chartsData.user_growth_data,
+        borderColor: '#8B5CF6',
+        backgroundColor: 'rgba(139, 92, 246, 0.12)',
+        borderWidth: 2.5,
+        tension: 0.35,
+        fill: true,
+        pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, stepSize: 1 } }
+      }
+    }
+  });
+
+  // 4. KYC Status Donut Chart
+  const ctxKyc = document.getElementById('kycDonutChart').getContext('2d');
+  new Chart(ctxKyc, {
+    type: 'doughnut',
+    data: {
+      labels: ['Verified', 'Pending', 'Unverified/Rejected'],
+      datasets: [{
+        data: [
+          chartsData.kyc_distribution.verified,
+          chartsData.kyc_distribution.pending,
+          chartsData.kyc_distribution.unverified
+        ],
+        backgroundColor: ['#10B981', '#F59E0B', '#64748B'],
+        borderWidth: 0,
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: textColor, boxWidth: 10, padding: 12 }
+        }
+      },
+      cutout: '70%'
+    }
+  });
+});
+
+// Modal Actions
+function openRejectModal(type, id, label) {
+  const modal = document.getElementById('reject-modal');
+  const title = document.getElementById('modal-title');
+  const form = document.getElementById('modal-reject-form');
+  const appId = document.getElementById('modal-app-id');
+  const wdId = document.getElementById('modal-wd-id');
+
+  if (type === 'kyc') {
+    title.innerText = 'Reject KYC Application';
+    form.action = "{% url 'admin:api_kyc_action' %}";
+    appId.value = id;
+    wdId.value = '';
+  } else {
+    title.innerText = 'Reject Withdrawal Disbursement';
+    form.action = "{% url 'admin:api_withdrawal_action' %}";
+    wdId.value = id;
+    appId.value = '';
+  }
+
+  modal.classList.add('open');
+}
+
+function closeRejectModal() {
+  document.getElementById('reject-modal').classList.remove('open');
+}
+</script>
+{% endblock %}

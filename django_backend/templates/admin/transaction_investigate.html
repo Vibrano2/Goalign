@@ -1,0 +1,237 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block breadcrumbs %}
+  <span class="crumb-sep">/</span>
+  <a href="/admin/ledger/ledgertransaction/">Ledger Transactions</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Investigation: {{ reference_id }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="investigate-container">
+
+  <!-- Header -->
+  <div class="investigate-header">
+    <div>
+      <h1 class="investigate-title">Transaction Investigation Tool</h1>
+      <p class="investigate-subtitle">Forensic reconciliation of double-entry ledger postings and associated security audit traces.</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <a href="/admin/ledger/ledgertransaction/" class="btn-fintech btn-fintech-secondary">Back to Ledger</a>
+      <a href="{% url 'admin:index' %}" class="btn-fintech btn-fintech-primary">Control Center</a>
+    </div>
+  </div>
+
+  <!-- Search Reference Input -->
+  <div class="fintech-card" style="padding: 16px;">
+    <form method="GET" action="" onsubmit="event.preventDefault(); window.location.href='/admin/investigate/' + encodeURIComponent(document.getElementById('ref-input').value.trim()) + '/';" style="display: flex; gap: 12px; align-items: center;">
+      <div style="flex: 1; display: flex; align-items: center; gap: 10px; background: var(--bg-surface-alt); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 14px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="ref-input" value="{{ reference_id }}" placeholder="Enter reference_id or transaction UUID..." style="width: 100%; border: none; background: transparent; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-main);">
+      </div>
+      <button type="submit" class="btn-fintech btn-fintech-primary">Investigate Reference</button>
+    </form>
+  </div>
+
+  {% if ledger_tx %}
+    <!-- Ledger Transaction Metadata Card -->
+    <div class="fintech-card">
+      <div class="card-header-row">
+        <div>
+          <h3 class="card-heading">Ledger Transaction Header</h3>
+          <p class="card-caption">Immutable journal record locked in database storage.</p>
+        </div>
+        <div>
+          {% if ledger_tx.status == 'posted' %}
+            <span class="badge badge-success" style="font-size: 13px; padding: 4px 12px;">STATUS: POSTED</span>
+          {% else %}
+            <span class="badge badge-warning" style="font-size: 13px; padding: 4px 12px;">STATUS: {{ ledger_tx.status|upper }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">Transaction UUID</span>
+          <span class="meta-val hash-monospace">{{ ledger_tx.id }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Reference ID</span>
+          <span class="meta-val hash-monospace" style="color: var(--primary-blue);">{{ ledger_tx.reference_id }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Transaction Type</span>
+          <span class="meta-val"><span class="badge badge-neutral">{{ ledger_tx.transaction_type }}</span></span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Posted Timestamp</span>
+          <span class="meta-val">{{ ledger_tx.created_at|date:"Y-m-d H:i:s T" }}</span>
+        </div>
+      </div>
+
+      {% if ledger_tx.description %}
+      <div style="background: var(--bg-surface-alt); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;">
+        <strong>Description:</strong> {{ ledger_tx.description }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Double-Entry Ledger Entries Table -->
+    <div class="fintech-card">
+      <div class="card-header-row">
+        <div>
+          <h3 class="card-heading">Double-Entry Journal Entries (Legs)</h3>
+          <p class="card-caption">Strict accounting equality: Every debit must equal a corresponding credit.</p>
+        </div>
+        <span class="badge badge-info">{{ entries|length }} Leg{{ entries|length|pluralize }}</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="fintech-table">
+          <thead>
+            <tr>
+              <th>Entry ID</th>
+              <th>Account Type</th>
+              <th>User Account</th>
+              <th>Asset</th>
+              <th>Direction</th>
+              <th style="text-align: right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+              <tr>
+                <td><span class="hash-monospace">{{ entry.id|slice:":8" }}...</span></td>
+                <td><span class="badge badge-neutral">{{ entry.account_type }}</span></td>
+                <td>
+                  {% if entry.user %}
+                    <span style="font-weight: 600; color: var(--text-main);">{{ entry.user.username }}</span>
+                  {% else %}
+                    <span style="color: var(--text-muted); font-style: italic;">[System Protocol Account]</span>
+                  {% endif %}
+                </td>
+                <td><span class="badge badge-info">{{ entry.asset }}</span></td>
+                <td>
+                  {% if entry.direction == 'debit' %}
+                    <span class="badge badge-danger">DEBIT</span>
+                  {% else %}
+                    <span class="badge badge-success">CREDIT</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: right;">
+                  <span class="amount-val" style="font-size: 13px; {% if entry.direction == 'debit' %}color: var(--danger-red);{% else %}color: var(--success-green);{% endif %}">
+                    {% if entry.direction == 'debit' %}-{% else %}+{% endif %}{{ entry.amount }} {{ entry.asset }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  {% else %}
+    <div class="fintech-card" style="padding: 40px; text-align: center;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--warning-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 12px auto;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <h3 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">No Direct Ledger Transaction Found</h3>
+      <p style="font-size: 13px; color: var(--text-muted); max-width: 500px; margin: 0 auto;">No immutable ledger record exists with reference ID or UUID <code>{{ reference_id }}</code>. Check audit logs below or verify the transaction ID.</p>
+    </div>
+  {% endif %}
+
+  <!-- Related Audit Logs -->
+  <div class="fintech-card">
+    <div class="card-header-row">
+      <div>
+        <h3 class="card-heading">Security Audit Log Trace</h3>
+        <p class="card-caption">All administrative interventions and system actions referencing this transaction.</p>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="fintech-table">
+        <thead>
+          <tr>
+            <th>Actor</th>
+            <th>Action</th>
+            <th>Target Type</th>
+            <th>Metadata Details</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+            <tr>
+              <td><span style="font-weight: 600; color: var(--text-main);">{{ log.actor.username|default:"System" }}</span></td>
+              <td><span class="badge badge-neutral">{{ log.action }}</span></td>
+              <td><span class="hash-monospace">{{ log.target_type }}</span></td>
+              <td><span class="hash-monospace" style="font-size: 11px;">{{ log.metadata|default:"-" }}</span></td>
+              <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">No administrative audit entries logged for this reference.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  .investigate-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  .investigate-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .investigate-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+  .investigate-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    padding: 14px;
+    background: var(--bg-surface-alt);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+  }
+  @media (max-width: 768px) {
+    .meta-grid { grid-template-columns: 1fr; }
+  }
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .meta-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .meta-val {
+    font-size: 13px;
+    color: var(--text-main);
+    font-weight: 500;
+  }
+</style>
+{% endblock %}

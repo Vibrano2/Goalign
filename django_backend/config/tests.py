@@ -79,6 +79,7 @@ import sys
 
 os.environ['ALLOWED_HOSTS'] = 'goalign.com'
 os.environ['DB_NAME'] = ''
+os.environ['PGDATABASE'] = ''
 os.environ['ENABLE_MOCK_FINANCE'] = 'false'
 os.environ['SECRET_KEY'] = 'test'
 

@@ -1,0 +1,196 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block breadcrumbs %}
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">KYC Review Queue</span>
+{% endblock %}
+
+{% block content %}
+<div class="queue-page-container">
+
+  <!-- Queue Header -->
+  <div class="queue-header-row">
+    <div>
+      <h1 class="queue-title">KYC Identity Review Queue</h1>
+      <p class="queue-subtitle">Review submitted identification documents and grant verified trader status.</p>
+    </div>
+
+    <!-- Filter Pills -->
+    <div class="queue-filter-group">
+      <a href="?status=pending" class="filter-pill {% if status_filter == 'pending' %}active{% endif %}">
+        Pending ({{ pending_count }})
+      </a>
+      <a href="?status=verified" class="filter-pill {% if status_filter == 'verified' %}active{% endif %}">
+        Verified ({{ verified_count }})
+      </a>
+      <a href="?status=rejected" class="filter-pill {% if status_filter == 'rejected' %}active{% endif %}">
+        Rejected ({{ rejected_count }})
+      </a>
+      <a href="?status=all" class="filter-pill {% if status_filter == 'all' %}active{% endif %}">
+        All Submissions
+      </a>
+    </div>
+  </div>
+
+  <!-- Applications Table -->
+  <div class="fintech-card">
+    <div class="table-wrapper">
+      <table class="fintech-table">
+        <thead>
+          <tr>
+            <th>Applicant Email</th>
+            <th>Legal Name</th>
+            <th>ID Type</th>
+            <th>Date of Birth</th>
+            <th>Residential Address</th>
+            <th>Status</th>
+            <th>Submitted At</th>
+            <th style="text-align: right;">Review Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for app in applications %}
+            <tr>
+              <td>
+                <div class="cell-user">
+                  <span class="user-fullname">{{ app.user.email }}</span>
+                  <span class="hash-monospace">UID: {{ app.user.firebase_uid|slice:":12" }}...</span>
+                </div>
+              </td>
+              <td><span style="font-weight: 600; color: var(--text-main);">{{ app.full_name }}</span></td>
+              <td><span class="badge badge-neutral">{{ app.id_type|upper }}</span></td>
+              <td>{{ app.date_of_birth|default:"-" }}</td>
+              <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ app.address }}">{{ app.address|default:"-" }}</td>
+              <td>
+                {% if app.user.kyc_status == 'verified' %}
+                  <span class="badge badge-success">VERIFIED</span>
+                {% elif app.user.kyc_status == 'pending' %}
+                  <span class="badge badge-warning">PENDING</span>
+                {% elif app.user.kyc_status == 'rejected' %}
+                  <span class="badge badge-danger">REJECTED</span>
+                {% else %}
+                  <span class="badge badge-neutral">{{ app.user.kyc_status|upper }}</span>
+                {% endif %}
+              </td>
+              <td>{{ app.created_at|date:"Y-m-d H:i" }}</td>
+              <td style="text-align: right;">
+                {% if app.user.kyc_status == 'pending' %}
+                  <div class="btn-group-sm" style="justify-content: flex-end;">
+                    <form action="{% url 'admin:api_kyc_action' %}" method="POST" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="application_id" value="{{ app.id }}">
+                      <input type="hidden" name="action" value="approve">
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="btn-sm success" onclick="return confirm('Approve KYC application for {{ app.full_name }}?')">Approve</button>
+                    </form>
+                    <button type="button" class="btn-sm danger" onclick="openRejectModal('{{ app.id }}', '{{ app.user.email }}')">Reject</button>
+                  </div>
+                {% else %}
+                  <span style="color: var(--text-muted); font-size: 11px;">Resolved</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 36px; color: var(--text-muted);">
+                <div class="empty-state">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <p>No KYC submissions found matching this filter.</p>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Rejection Modal -->
+<div class="fintech-modal-overlay" id="reject-modal">
+  <div class="fintech-modal-card">
+    <h3 style="font-size: 16px; font-weight: 700; color: var(--danger-red); margin-bottom: 8px;">Reject KYC Application</h3>
+    <p id="modal-user-label" style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">State reason for rejecting applicant.</p>
+
+    <form method="POST" action="{% url 'admin:api_kyc_action' %}">
+      {% csrf_token %}
+      <input type="hidden" name="application_id" id="modal-app-id" value="">
+      <input type="hidden" name="action" value="reject">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">Operational Rejection Reason</label>
+        <textarea name="reason" rows="3" required placeholder="e.g. Unreadable ID document / Expired passport / Information mismatch..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-surface-alt); color: var(--text-main); font-size: 13px; font-family: inherit;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-fintech btn-fintech-secondary" onclick="closeRejectModal()">Cancel</button>
+        <button type="submit" class="btn-fintech btn-fintech-danger">Confirm Rejection</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .queue-page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  .queue-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .queue-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+  .queue-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .queue-filter-group {
+    display: flex;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .filter-pill {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .filter-pill:hover {
+    color: var(--text-main);
+    text-decoration: none;
+  }
+  .filter-pill.active {
+    background: var(--primary-blue);
+    color: #FFFFFF;
+  }
+</style>
+
+<script>
+function openRejectModal(appId, email) {
+  document.getElementById('modal-app-id').value = appId;
+  document.getElementById('modal-user-label').innerText = "Applicant: " + email;
+  document.getElementById('reject-modal').classList.add('open');
+}
+function closeRejectModal() {
+  document.getElementById('reject-modal').classList.remove('open');
+}
+</script>
+{% endblock %}

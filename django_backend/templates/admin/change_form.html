@@ -1,0 +1,270 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrahead %}
+  {{ block.super }}
+  {{ media }}
+{% endblock %}
+
+{% block breadcrumbs %}
+  <span class="crumb-sep">/</span>
+  <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  <span class="crumb-sep">/</span>
+  <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">{% if add %}Add {{ opts.verbose_name }}{% else %}{{ original|truncatewords:"10" }}{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="changeform-container">
+
+  <div class="changeform-header">
+    <div>
+      <h1 class="changeform-title">
+        {% if add %}Add New {{ opts.verbose_name|capfirst }}{% else %}Edit {{ opts.verbose_name|capfirst }}: {{ original|truncatewords:"8" }}{% endif %}
+      </h1>
+      <p class="changeform-subtitle">Review object properties, permissions, and audit parameters.</p>
+    </div>
+    {% if not add and has_delete_permission %}
+      <div>
+        <a href="{% url opts|admin_urlname:'delete' original.pk|admin_urlquote %}" class="btn-fintech btn-fintech-danger" onclick="return confirm('CAUTION: Are you sure you want to permanently delete this record? This action cannot be undone.')">
+          Delete {{ opts.verbose_name }}
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <div id="content-main">
+    {% block object-tools %}
+      {% if change and not is_popup %}
+        <ul class="object-tools" style="list-style:none; padding:0; display:flex; gap:8px; margin-bottom:14px;">
+          {% block object-tools-items %}
+            {% change_form_object_tools %}
+          {% endblock %}
+        </ul>
+      {% endif %}
+    {% endblock %}
+
+    <form {% if has_file_field %}enctype="multipart/form-data" {% endif %}{% if form_url %}action="{{ form_url }}" {% endif %}method="post" id="{{ opts.model_name }}_form" novalidate>
+      {% csrf_token %}
+      {% block form_top %}{% endblock %}
+
+      <div>
+        {% if is_popup %}<input type="hidden" name="{{ is_popup_var }}" value="1">{% endif %}
+        {% if to_field %}<input type="hidden" name="{{ to_field_var }}" value="{{ to_field }}">{% endif %}
+        {% if errors %}
+          <p class="errornote" style="background: rgba(239, 68, 68, 0.12); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 12px; border-radius: 8px; font-weight: 600; margin-bottom: 16px;">
+            {% blocktranslate count counter=errors|length %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktranslate %}
+          </p>
+          {{ adminform.form.non_field_errors }}
+        {% endif %}
+
+        {% block field_sets %}
+          {% for fieldset in adminform %}
+            <div class="fintech-card form-card">
+              {% if fieldset.name %}
+                <h3 class="form-fieldset-title">{{ fieldset.name }}</h3>
+              {% endif %}
+              {% if fieldset.description %}
+                <p class="form-fieldset-desc">{{ fieldset.description }}</p>
+              {% endif %}
+              <div class="fieldset-fields">
+                {% for line in fieldset %}
+                  <div class="form-row{% if line.fields|length == 1 and line.errors %} errors{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% endfor %}">
+                    {% if line.fields|length == 1 %}
+                      {{ line.errors }}
+                    {% else %}
+                      <div class="form-multierrors">
+                        {% for field in line %}
+                          {{ field.errors }}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    {% for field in line %}
+                      <div{% if not line.fields|length == 1 %} class="fieldBox{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}"{% elif field.is_readonly %} class="fieldBox readonly"{% endif %}>
+                        {% if not line.fields|length == 1 and not field.is_readonly %}{{ field.label_tag }}{% else %}{{ field.label_tag }}{% endif %}
+                        {% if field.is_readonly %}
+                          <div class="readonly-value hash-monospace">{{ field.contents }}</div>
+                        {% else %}
+                          {{ field.field }}
+                        {% endif %}
+                        {% if field.field.help_text %}
+                          <div class="help">{{ field.field.help_text|safe }}</div>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        {% endblock %}
+
+        {% block after_field_sets %}{% endblock %}
+
+        {% block inline_field_sets %}
+          {% for inline_admin_formset in inline_admin_formsets %}
+            <div class="fintech-card form-card" style="margin-top: 18px;">
+              {% include inline_admin_formset.opts.template %}
+            </div>
+          {% endfor %}
+        {% endblock %}
+
+        {% block after_related_objects %}{% endblock %}
+
+        {% block submit_buttons_bottom %}
+          <div class="submit-toolbar">
+            {% submit_row %}
+          </div>
+        {% endblock %}
+
+        {% block admin_change_form_document_ready %}
+          <script id="django-admin-form-add-constants" src="{% static 'admin/js/change_form.js' %}" {% if adminform and add %}data-model-name="{{ opts.model_name }}"{% endif %} async></script>
+        {% endblock %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .changeform-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .changeform-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 14px;
+  }
+  .changeform-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+  .changeform-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .form-card {
+    margin-bottom: 16px;
+    padding: 24px;
+  }
+  .form-fieldset-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary-blue);
+    margin-bottom: 6px;
+  }
+  .form-fieldset-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .fieldset-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .form-row label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+  .form-row input[type="text"],
+  .form-row input[type="email"],
+  .form-row input[type="password"],
+  .form-row input[type="number"],
+  .form-row input[type="url"],
+  .form-row select,
+  .form-row textarea {
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-main);
+    width: 100%;
+    max-width: 600px;
+    outline: none;
+    font-family: inherit;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    border-color: var(--primary-blue);
+  }
+  .form-row .help {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .readonly-value {
+    background: var(--bg-surface-alt);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+    max-width: 600px;
+    color: var(--text-muted);
+  }
+
+  /* Submit Row */
+  .submit-toolbar {
+    margin-top: 20px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    box-shadow: var(--card-shadow);
+  }
+  .submit-toolbar input[type="submit"], .submit-toolbar .button {
+    background: var(--primary-blue) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 10px 18px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+  }
+  .submit-toolbar input[type="submit"].default {
+    background: var(--primary-blue) !important;
+  }
+  .submit-toolbar input[name="_continue"] {
+    background: var(--bg-surface-alt) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+  }
+  .submit-toolbar input[name="_addanother"] {
+    background: var(--bg-surface-alt) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+  }
+  .submit-toolbar .deletelink {
+    background: rgba(239, 68, 68, 0.12) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    color: var(--danger-red) !important;
+    padding: 9px 16px !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+  }
+</style>
+{% endblock %}

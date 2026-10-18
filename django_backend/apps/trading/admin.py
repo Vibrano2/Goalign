@@ -62,7 +62,15 @@ class StakeAdmin(admin.ModelAdmin):
 
 @admin.register(KYCApplication)
 class KYCApplicationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'full_name', 'id_type', 'date_of_birth', 'created_at')
+    list_display = ('id', 'user', 'full_name', 'id_type', 'date_of_birth', 'review_queue_link', 'created_at')
     list_filter = ('id_type', 'created_at')
     search_fields = ('full_name', 'user__email', 'address')
     readonly_fields = ('created_at',)
+
+    def review_queue_link(self, obj):
+        from django.utils.html import format_html
+        from django.urls import reverse
+        url = reverse('admin:kyc_queue')
+        return format_html('<a href="{}" style="background: #087CCF; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Review in Queue</a>', url)
+    review_queue_link.short_description = "Review Action"
+

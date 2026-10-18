@@ -219,7 +219,7 @@ const Admin = () => {
           <h1 className="text-3xl font-extrabold tracking-tight mb-2">Platform Admin Dashboard</h1>
           <p className="text-blue-200">Manage users, adjust VIP tiers, settle withdrawals, and oversee platform liquidity.</p>
 
-          <div className="flex space-x-3 mt-6">
+          <div className="flex flex-wrap items-center gap-3 mt-6">
             <button
               onClick={() => setAdminTab('users')}
               className={`px-5 py-2.5 rounded-lg font-bold text-sm transition ${
@@ -241,6 +241,14 @@ const Admin = () => {
                 </span>
               )}
             </button>
+            <a
+              href="http://127.0.0.1:8000/admin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2.5 rounded-lg font-bold text-sm bg-[#10B981] hover:bg-[#059669] text-white shadow flex items-center space-x-2 ml-auto"
+            >
+              <span>Enterprise Super Admin Portal &rarr;</span>
+            </a>
           </div>
         </div>
       </div>
