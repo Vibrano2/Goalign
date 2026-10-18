@@ -3,24 +3,40 @@ import sys
 
 DEBUG = False
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+from urllib.parse import urlparse
 
-if not ALLOWED_HOSTS or ALLOWED_HOSTS == ['']:
-    print("FATAL: ALLOWED_HOSTS is not configured.")
-    sys.exit(1)
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+cors_origins = [o.strip() for o in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
+if cors_origins:
+    CORS_ALLOWED_ORIGINS = cors_origins
+else:
+    CORS_ALLOW_ALL_ORIGINS = True
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+database_url = os.getenv('DATABASE_URL')
+if database_url:
+    url = urlparse(database_url)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': url.path[1:],
+            'USER': url.username,
+            'PASSWORD': url.password,
+            'HOST': url.hostname,
+            'PORT': url.port or 5432,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME') or os.getenv('PGDATABASE'),
+            'USER': os.getenv('DB_USER') or os.getenv('PGUSER'),
+            'PASSWORD': os.getenv('DB_PASSWORD') or os.getenv('PGPASSWORD', ''),
+            'HOST': os.getenv('DB_HOST') or os.getenv('PGHOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT') or os.getenv('PGPORT', '5432'),
+        }
+    }
 
 if not DATABASES['default']['NAME']:
     print("FATAL: Database configuration is missing.")
