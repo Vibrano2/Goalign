@@ -14,9 +14,10 @@
     </div>
     <div class="dashboard-header-actions">
       <div class="timeframe-selector">
-        <button type="button" class="timeframe-pill active" data-days="7">7D</button>
-        <button type="button" class="timeframe-pill" data-days="30">30D</button>
-        <button type="button" class="timeframe-pill" data-days="90">90D</button>
+        <button type="button" class="timeframe-pill" data-range="24h">24H</button>
+        <button type="button" class="timeframe-pill active" data-range="7d">7D</button>
+        <button type="button" class="timeframe-pill" data-range="30d">30D</button>
+        <button type="button" class="timeframe-pill" data-range="ytd">YTD</button>
       </div>
       <a href="{% url 'admin:kyc_queue' %}" class="btn-fintech btn-fintech-secondary">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -203,15 +204,25 @@
       <div class="chart-header">
         <div>
           <h2 class="chart-title">Trading Volume & Platform Revenue</h2>
-          <p class="chart-subtitle">Daily notional volume executed vs protocol fee generation.</p>
+          <p class="chart-subtitle">Notional volume executed vs protocol fee generation across selected horizon.</p>
         </div>
-        <div class="chart-legend-pills">
-          <span class="legend-pill" style="--pill-color: #0077B6;">Volume ($)</span>
-          <span class="legend-pill" style="--pill-color: #00B4D8;">Revenue ($)</span>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div class="timeframe-selector">
+            <button type="button" class="timeframe-pill" data-range="24h">24H</button>
+            <button type="button" class="timeframe-pill active" data-range="7d">7D</button>
+            <button type="button" class="timeframe-pill" data-range="30d">30D</button>
+            <button type="button" class="timeframe-pill" data-range="ytd">YTD</button>
+          </div>
+          <div class="chart-legend-pills">
+            <span class="legend-pill" style="--pill-color: #0077B6;">Volume ($)</span>
+            <span class="legend-pill" style="--pill-color: #00B4D8;">Revenue ($)</span>
+          </div>
         </div>
-
       </div>
-      <div class="chart-body">
+      <div class="chart-body" style="position: relative;">
+        <div id="chart-loading-indicator" class="chart-loading-overlay" style="display: none;">
+          <div class="spinner-small"></div>
+        </div>
         <canvas id="volumeRevenueChart"></canvas>
       </div>
     </div>
@@ -585,10 +596,42 @@
     border-radius: 6px;
     color: var(--text-muted);
     cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .timeframe-pill:hover {
+    color: var(--text-main);
   }
   .timeframe-pill.active {
     background: var(--primary-blue);
     color: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(0, 119, 182, 0.3);
+  }
+
+  .chart-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(3, 4, 94, 0.45);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 8px;
+    transition: opacity 0.2s ease;
+  }
+  .spinner-small {
+    width: 26px;
+    height: 26px;
+    border: 2.5px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #00B4D8;
+    border-radius: 50%;
+    animation: spin-chart 0.7s linear infinite;
+  }
+  @keyframes spin-chart {
+    to { transform: rotate(360deg); }
   }
 
   /* Alerts Stream */
@@ -1021,7 +1064,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 1. Trading Volume & Revenue Combined Chart
   const ctxVolRev = document.getElementById('volumeRevenueChart').getContext('2d');
-  new Chart(ctxVolRev, {
+  const volRevChart = new Chart(ctxVolRev, {
     type: 'bar',
     data: {
       labels: chartsData.labels,
@@ -1068,7 +1111,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 2. Treasury Flow (Inflow vs Outflow)
   const ctxFlow = document.getElementById('flowChart').getContext('2d');
-  new Chart(ctxFlow, {
+  const flowChart = new Chart(ctxFlow, {
     type: 'bar',
     data: {
       labels: chartsData.labels,
@@ -1100,7 +1143,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 3. User Growth Chart
   const ctxUsers = document.getElementById('userGrowthChart').getContext('2d');
-  new Chart(ctxUsers, {
+  const userGrowthChart = new Chart(ctxUsers, {
     type: 'line',
     data: {
       labels: chartsData.labels,
@@ -1154,6 +1197,63 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       cutout: '70%'
     }
+  });
+
+  // 5. Interactive Timeframe Selector Engine
+  function updateActiveTimeframe(rangeKey) {
+    document.querySelectorAll('.timeframe-pill').forEach(pill => {
+      if (pill.getAttribute('data-range') === rangeKey) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    });
+
+    const overlay = document.getElementById('chart-loading-indicator');
+    if (overlay) overlay.style.display = 'flex';
+
+    fetch(`/admin/api/analytics-data/?range=${encodeURIComponent(rangeKey)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (!res || !res.data) return;
+        const d = res.data;
+
+        // 1. Update Volume & Revenue Chart
+        if (volRevChart) {
+          volRevChart.data.labels = d.labels;
+          volRevChart.data.datasets[0].data = d.volume_data;
+          volRevChart.data.datasets[1].data = d.revenue_data;
+          volRevChart.update();
+        }
+
+        // 2. Update Flow Chart
+        if (flowChart) {
+          flowChart.data.labels = d.labels;
+          flowChart.data.datasets[0].data = d.deposit_data;
+          flowChart.data.datasets[1].data = d.withdrawal_data;
+          flowChart.update();
+        }
+
+        // 3. Update User Growth Chart
+        if (userGrowthChart) {
+          userGrowthChart.data.labels = d.labels;
+          userGrowthChart.data.datasets[0].data = d.user_growth_data;
+          userGrowthChart.update();
+        }
+      })
+      .catch(err => console.error('Error fetching analytics data', err))
+      .finally(() => {
+        if (overlay) overlay.style.display = 'none';
+      });
+  }
+
+  document.querySelectorAll('.timeframe-pill').forEach(pill => {
+    pill.addEventListener('click', function () {
+      const rangeKey = this.getAttribute('data-range');
+      if (rangeKey) {
+        updateActiveTimeframe(rangeKey);
+      }
+    });
   });
 
 });

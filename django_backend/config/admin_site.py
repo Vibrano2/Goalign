@@ -42,6 +42,7 @@ class GoalignSuperAdminSite(admin.AdminSite):
             path('api/p2p-dispute-action/', self.admin_view(self.p2p_dispute_action_api), name='api_p2p_dispute_action'),
             path('api/user-status-action/', self.admin_view(self.user_status_action_api), name='api_user_status_action'),
             path('api/heartbeat/', self.admin_view(self.heartbeat_api), name='api_heartbeat'),
+            path('api/analytics-data/', self.admin_view(self.analytics_data_api), name='api_analytics_data'),
         ]
         return custom_urls + urls
 
@@ -170,7 +171,7 @@ class GoalignSuperAdminSite(admin.AdminSite):
             'total_risk_exposure': open_orders + active_positions,
         }
 
-    def get_analytics_charts_data(self):
+    def get_analytics_charts_data(self, range_key='7d'):
         now = timezone.now()
         labels = []
         volume_data = []
@@ -179,44 +180,77 @@ class GoalignSuperAdminSite(admin.AdminSite):
         deposit_data = []
         withdrawal_data = []
 
-        cumulative_users = 0
         all_accounts = list(GoalignAccount.objects.order_by('created_at').values('created_at'))
 
-        # Aggregate daily buckets for past 7 days
-        for i in range(6, -1, -1):
-            day_start = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = day_start + timedelta(days=1)
-            date_label = day_start.strftime('%b %d')
-            labels.append(date_label)
+        buckets = []
+        range_key = (range_key or '7d').lower()
 
-            # Daily Volume
-            v = Trade.objects.filter(created_at__gte=day_start, created_at__lt=day_end).aggregate(
+        if range_key == '24h':
+            # 6 buckets of 4 hours
+            for i in range(5, -1, -1):
+                b_start = now - timedelta(hours=(i + 1) * 4)
+                b_end = now - timedelta(hours=i * 4)
+                b_label = b_end.strftime('%I:%M %p')
+                buckets.append((b_start, b_end, b_label))
+        elif range_key == '30d':
+            # 10 buckets of 3 days
+            for i in range(9, -1, -1):
+                b_start = (now - timedelta(days=(i + 1) * 3)).replace(hour=0, minute=0, second=0, microsecond=0)
+                b_end = (now - timedelta(days=i * 3)).replace(hour=0, minute=0, second=0, microsecond=0)
+                b_label = b_start.strftime('%b %d')
+                buckets.append((b_start, b_end, b_label))
+        elif range_key == 'ytd':
+            # Monthly buckets for current year
+            current_year = now.year
+            current_month = now.month
+            for m in range(1, current_month + 1):
+                b_start = timezone.make_aware(datetime(current_year, m, 1, 0, 0, 0))
+                if m == 12:
+                    b_end = timezone.make_aware(datetime(current_year + 1, 1, 1, 0, 0, 0))
+                else:
+                    b_end = timezone.make_aware(datetime(current_year, m + 1, 1, 0, 0, 0))
+                b_label = b_start.strftime('%b')
+                buckets.append((b_start, b_end, b_label))
+        else:
+            # Default: 7 days
+            range_key = '7d'
+            for i in range(6, -1, -1):
+                b_start = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+                b_end = b_start + timedelta(days=1)
+                b_label = b_start.strftime('%b %d')
+                buckets.append((b_start, b_end, b_label))
+
+        for b_start, b_end, b_label in buckets:
+            labels.append(b_label)
+
+            # Daily / Bucket Volume
+            v = Trade.objects.filter(created_at__gte=b_start, created_at__lt=b_end).aggregate(
                 vol=Sum(F('amount') * F('price'))
             )['vol'] or Decimal('0.00')
             volume_data.append(float(v))
 
-            # Daily Revenue
-            r = Trade.objects.filter(created_at__gte=day_start, created_at__lt=day_end).aggregate(
+            # Daily / Bucket Revenue
+            r = Trade.objects.filter(created_at__gte=b_start, created_at__lt=b_end).aggregate(
                 fee=Sum('fee')
             )['fee'] or Decimal('0.00')
             revenue_data.append(float(r))
 
-            # Daily Deposits
+            # Daily / Bucket Deposits
             d = LedgerEntry.objects.filter(
                 account_type='system_deposits', direction='debit',
-                created_at__gte=day_start, created_at__lt=day_end
+                created_at__gte=b_start, created_at__lt=b_end
             ).aggregate(s=Sum('amount'))['s'] or Decimal('0.00')
             deposit_data.append(float(d))
 
-            # Daily Withdrawals
+            # Daily / Bucket Withdrawals
             w = WithdrawalRequest.objects.filter(
                 status='completed',
-                created_at__gte=day_start, created_at__lt=day_end
+                created_at__gte=b_start, created_at__lt=b_end
             ).aggregate(s=Sum('amount'))['s'] or Decimal('0.00')
             withdrawal_data.append(float(w))
 
             # Cumulative Users
-            u_count = sum(1 for a in all_accounts if a['created_at'] and a['created_at'] <= day_end)
+            u_count = sum(1 for a in all_accounts if a['created_at'] and a['created_at'] <= b_end)
             user_growth_data.append(u_count if u_count > 0 else len(all_accounts))
 
         # KYC distribution
@@ -225,6 +259,7 @@ class GoalignSuperAdminSite(admin.AdminSite):
         kyc_unverified = GoalignAccount.objects.filter(Q(kyc_status='unverified') | Q(kyc_status='rejected')).count()
 
         return {
+            'range': range_key,
             'labels': labels,
             'volume_data': volume_data,
             'revenue_data': revenue_data,
@@ -780,6 +815,15 @@ class GoalignSuperAdminSite(admin.AdminSite):
                     for k in recent_kyc
                 ],
             }
+        })
+
+    def analytics_data_api(self, request):
+        range_key = request.GET.get('range', '7d')
+        charts_data = self.get_analytics_charts_data(range_key=range_key)
+        return JsonResponse({
+            'status': 'ok',
+            'range': range_key,
+            'data': charts_data
         })
 
 
