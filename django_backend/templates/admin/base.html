@@ -623,6 +623,83 @@
     #content-main {
       width: 100%;
     }
+
+    /* Real-Time Fintech Toast Notifications */
+    .fintech-toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 9999;
+      pointer-events: none;
+      max-width: 380px;
+      width: 100%;
+    }
+    .fintech-toast {
+      pointer-events: auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--primary-blue);
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .fintech-toast.toast-danger {
+      border-left-color: var(--danger-red);
+    }
+    .fintech-toast.toast-warning {
+      border-left-color: var(--warning-amber);
+    }
+    .fintech-toast.toast-info {
+      border-left-color: var(--accent-cyan);
+    }
+    .toast-body {
+      flex: 1;
+    }
+    .toast-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+    .toast-msg {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .toast-link {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+    .toast-link:hover {
+      text-decoration: underline;
+    }
+    .toast-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .toast-close:hover {
+      color: var(--text-main);
+    }
+    @keyframes toastSlideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
   </style>
 
   {% block extrahead %}{% endblock %}
@@ -671,7 +748,7 @@
             </svg>
           </span>
           <span class="nav-label">KYC Review Queue</span>
-          {% if metrics.pending_kyc_count %}<span class="nav-badge">{{ metrics.pending_kyc_count }}</span>{% endif %}
+          <span id="nav-badge-kyc" class="nav-badge" style="{% if not metrics.pending_kyc_count %}display:none;{% endif %}">{{ metrics.pending_kyc_count|default:0 }}</span>
         </a>
         <a href="{% url 'admin:withdrawals_queue' %}" class="nav-link {% if '/admin/withdrawals-queue/' in request.path %}active{% endif %}">
           <span class="nav-icon">
@@ -680,7 +757,7 @@
             </svg>
           </span>
           <span class="nav-label">Withdrawals Queue</span>
-          {% if metrics.pending_wds_count %}<span class="nav-badge danger">{{ metrics.pending_wds_count }}</span>{% endif %}
+          <span id="nav-badge-wds" class="nav-badge danger" style="{% if not metrics.pending_wds_count %}display:none;{% endif %}">{{ metrics.pending_wds_count|default:0 }}</span>
         </a>
         <a href="{% url 'admin:p2p_disputes' %}" class="nav-link {% if '/admin/p2p-disputes/' in request.path %}active{% endif %}">
           <span class="nav-icon">
@@ -689,7 +766,7 @@
             </svg>
           </span>
           <span class="nav-label">P2P Disputes Queue</span>
-          {% if metrics.disputed_p2p_count %}<span class="nav-badge danger">{{ metrics.disputed_p2p_count }}</span>{% endif %}
+          <span id="nav-badge-p2p" class="nav-badge danger" style="{% if not metrics.disputed_p2p_count %}display:none;{% endif %}">{{ metrics.disputed_p2p_count|default:0 }}</span>
         </a>
       </div>
 
@@ -908,10 +985,20 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
           </svg>
-          {% if metrics.pending_wds_count or metrics.pending_kyc_count %}
-            <span class="topbar-badge">{{ metrics.pending_wds_count|default:0|add:metrics.pending_kyc_count|default:0 }}</span>
-          {% endif %}
+          <span id="topbar-badge-bell" class="topbar-badge" style="{% if not metrics or not metrics.pending_wds_count and not metrics.pending_kyc_count and not metrics.disputed_p2p_count %}display:none;{% endif %}">
+            {% if metrics %}{{ metrics.pending_wds_count|default:0|add:metrics.pending_kyc_count|default:0|add:metrics.disputed_p2p_count|default:0 }}{% else %}0{% endif %}
+          </span>
         </a>
+
+        <!-- Audio Alerts Chime Toggle -->
+        <button type="button" class="topbar-btn" id="sound-toggle-btn" title="Toggle Real-Time Audio Chime Alerts">
+          <svg id="sound-icon-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <svg id="sound-icon-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none; color: var(--text-subtle);">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
 
         <!-- Light / Dark Theme Switch -->
         <button type="button" class="topbar-btn" id="theme-toggle-btn" title="Toggle Light/Dark Theme">
@@ -1011,8 +1098,152 @@
         if (searchInput) searchInput.focus();
       }
     });
+
+    // 4. Real-Time Heartbeat & Toast Notification Engine
+    let audioMuted = localStorage.getItem('goalign-audio-muted') === 'true';
+    const soundToggleBtn = document.getElementById('sound-toggle-btn');
+    const soundIconOn = document.getElementById('sound-icon-on');
+    const soundIconOff = document.getElementById('sound-icon-off');
+
+    function updateSoundUI() {
+      if (soundIconOn && soundIconOff) {
+        soundIconOn.style.display = audioMuted ? 'none' : 'block';
+        soundIconOff.style.display = audioMuted ? 'block' : 'none';
+      }
+    }
+    updateSoundUI();
+
+    if (soundToggleBtn) {
+      soundToggleBtn.addEventListener('click', function() {
+        audioMuted = !audioMuted;
+        localStorage.setItem('goalign-audio-muted', audioMuted);
+        updateSoundUI();
+        if (!audioMuted) playFintechChime('info');
+      });
+    }
+
+    function playFintechChime(type) {
+      if (audioMuted) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        if (type === 'danger') {
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.setValueAtTime(330, now + 0.12);
+        } else {
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+          osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+        }
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.36);
+      } catch (err) {
+        // AudioContext browser gesture restriction
+      }
+    }
+
+    function showToast(title, message, link, type) {
+      const container = document.getElementById('fintech-toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = 'fintech-toast toast-' + (type || 'info');
+
+      toast.innerHTML = `
+        <div class="toast-body">
+          <div class="toast-title">${title}</div>
+          <div class="toast-msg">${message}</div>
+          ${link ? `<a href="${link}" class="toast-link">View in Queue &rarr;</a>` : ''}
+        </div>
+        <button type="button" class="toast-close" onclick="this.closest('.fintech-toast').remove()">&times;</button>
+      `;
+
+      container.appendChild(toast);
+      playFintechChime(type);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 350);
+      }, 7000);
+    }
+
+    // State tracking for heartbeat
+    let prevWdsCount = null;
+    let prevKycCount = null;
+    let prevP2PCount = null;
+
+    function pollHeartbeat() {
+      fetch('/admin/api/heartbeat/')
+        .then(res => res.json())
+        .then(data => {
+          if (!data || !data.metrics) return;
+          const m = data.metrics;
+
+          // Update sidebar badges
+          const kycBadge = document.getElementById('nav-badge-kyc');
+          if (kycBadge) {
+            kycBadge.innerText = m.pending_kyc_count || 0;
+            kycBadge.style.display = m.pending_kyc_count > 0 ? 'inline-block' : 'none';
+          }
+
+          const wdsBadge = document.getElementById('nav-badge-wds');
+          if (wdsBadge) {
+            wdsBadge.innerText = m.pending_wds_count || 0;
+            wdsBadge.style.display = m.pending_wds_count > 0 ? 'inline-block' : 'none';
+          }
+
+          const p2pBadge = document.getElementById('nav-badge-p2p');
+          if (p2pBadge) {
+            p2pBadge.innerText = m.disputed_p2p_count || 0;
+            p2pBadge.style.display = m.disputed_p2p_count > 0 ? 'inline-block' : 'none';
+          }
+
+          const bellBadge = document.getElementById('topbar-badge-bell');
+          const totalUrgent = (m.pending_wds_count || 0) + (m.pending_kyc_count || 0) + (m.disputed_p2p_count || 0);
+          if (bellBadge) {
+            bellBadge.innerText = totalUrgent;
+            bellBadge.style.display = totalUrgent > 0 ? 'inline-block' : 'none';
+          }
+
+          // Trigger real-time toast alert when new items arrive
+          if (prevWdsCount !== null && m.pending_wds_count > prevWdsCount) {
+            showToast('Pending Withdrawal Request', `${m.pending_wds_count - prevWdsCount} new withdrawal(s) awaiting treasury approval.`, '/admin/withdrawals-queue/', 'warning');
+          }
+          if (prevP2PCount !== null && m.disputed_p2p_count > prevP2PCount) {
+            showToast('P2P Escrow Dispute Flagged', `${m.disputed_p2p_count - prevP2PCount} new dispute(s) require administrative arbitration.`, '/admin/p2p-disputes/?status=disputed', 'danger');
+          }
+          if (prevKycCount !== null && m.pending_kyc_count > prevKycCount) {
+            showToast('New KYC Submission', `${m.pending_kyc_count - prevKycCount} new user verification application(s) received.`, '/admin/kyc-queue/', 'info');
+          }
+
+          prevWdsCount = m.pending_wds_count;
+          prevKycCount = m.pending_kyc_count;
+          prevP2PCount = m.disputed_p2p_count;
+        })
+        .catch(err => console.debug('Heartbeat skipped', err));
+    }
+
+    // Initial query + periodic 30s live poll
+    pollHeartbeat();
+    setInterval(pollHeartbeat, 30000);
   })();
 </script>
+
+<!-- Global Toast Container -->
+<div id="fintech-toast-container" class="fintech-toast-container"></div>
 
 {% block extra_js %}{% endblock %}
 </body>

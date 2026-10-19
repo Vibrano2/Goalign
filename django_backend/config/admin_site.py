@@ -41,6 +41,7 @@ class GoalignSuperAdminSite(admin.AdminSite):
             path('api/withdrawal-action/', self.admin_view(self.withdrawal_action_api), name='api_withdrawal_action'),
             path('api/p2p-dispute-action/', self.admin_view(self.p2p_dispute_action_api), name='api_p2p_dispute_action'),
             path('api/user-status-action/', self.admin_view(self.user_status_action_api), name='api_user_status_action'),
+            path('api/heartbeat/', self.admin_view(self.heartbeat_api), name='api_heartbeat'),
         ]
         return custom_urls + urls
 
@@ -93,6 +94,13 @@ class GoalignSuperAdminSite(admin.AdminSite):
 
         return [cat for cat in grouped.values() if cat['models']]
 
+    def each_context(self, request):
+        context = super().each_context(request)
+        try:
+            context['metrics'] = self.get_dashboard_metrics()
+        except Exception:
+            context['metrics'] = {}
+        return context
 
     def get_dashboard_metrics(self):
         now = timezone.now()
@@ -746,6 +754,33 @@ class GoalignSuperAdminSite(admin.AdminSite):
                 messages.warning(request, f"Dispute resolved: Order #{order.id} escrow refunded to Seller ({order.seller.email if order.seller else 'Seller'}). Reason: {reason or 'Arbitration refund'}")
 
         return redirect(request.POST.get('next', '/admin/p2p-disputes/'))
+
+    def heartbeat_api(self, request):
+        metrics = self.get_dashboard_metrics()
+        
+        recent_wds = list(WithdrawalRequest.objects.filter(status='pending').order_by('-created_at').values('withdrawal_uuid', 'amount', 'asset', 'created_at')[:3])
+        recent_disputes = list(P2POrder.objects.filter(status='disputed').order_by('-updated_at').values('id', 'crypto_amount', 'asset', 'updated_at')[:3])
+        recent_kyc = list(GoalignAccount.objects.filter(kyc_status='pending').order_by('-updated_at').values('id', 'email', 'updated_at')[:3])
+
+        return JsonResponse({
+            'status': 'ok',
+            'timestamp': timezone.now().isoformat(),
+            'metrics': metrics,
+            'alerts': {
+                'pending_wds': [
+                    {'id': str(w['withdrawal_uuid']), 'amount': f"{w['amount']} {w['asset']}", 'created_at': w['created_at'].isoformat() if w['created_at'] else ''}
+                    for w in recent_wds
+                ],
+                'disputed_p2p': [
+                    {'id': d['id'], 'amount': f"{d['crypto_amount']} {d['asset']}", 'updated_at': d['updated_at'].isoformat() if d['updated_at'] else ''}
+                    for d in recent_disputes
+                ],
+                'pending_kyc': [
+                    {'id': k['id'], 'email': k['email'], 'updated_at': k['updated_at'].isoformat() if k['updated_at'] else ''}
+                    for k in recent_kyc
+                ],
+            }
+        })
 
 
 # Instantiate global custom admin site with standard 'admin' namespace
