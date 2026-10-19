@@ -3,6 +3,7 @@ from .models import (
     Order, Trade, Position, OptionPosition,
     P2PAd, P2POrder, CopyAllocation, Stake, KYCApplication
 )
+from apps.audit.export import export_as_csv_action
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
@@ -10,6 +11,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'side', 'type', 'symbol', 'created_at')
     search_fields = ('user__email', 'symbol', 'client_order_id')
     readonly_fields = ('created_at', 'updated_at')
+    actions = [export_as_csv_action("Export Selected Orders to CSV", filename_prefix="goalign_orders")]
 
 @admin.register(Trade)
 class TradeAdmin(admin.ModelAdmin):
@@ -17,6 +19,7 @@ class TradeAdmin(admin.ModelAdmin):
     list_filter = ('side', 'symbol', 'created_at')
     search_fields = ('user__email', 'symbol')
     readonly_fields = ('created_at',)
+    actions = [export_as_csv_action("Export Selected Trades to CSV", filename_prefix="goalign_trades")]
 
 @admin.register(Position)
 class PositionAdmin(admin.ModelAdmin):
@@ -24,6 +27,7 @@ class PositionAdmin(admin.ModelAdmin):
     list_filter = ('status', 'side', 'symbol', 'leverage')
     search_fields = ('user__email', 'symbol')
     readonly_fields = ('created_at', 'updated_at')
+    actions = [export_as_csv_action("Export Selected Positions to CSV", filename_prefix="goalign_positions")]
 
 @admin.register(OptionPosition)
 class OptionPositionAdmin(admin.ModelAdmin):
@@ -45,6 +49,7 @@ class P2POrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'asset', 'fiat', 'payment_method')
     search_fields = ('buyer__email', 'seller__email', 'asset')
     readonly_fields = ('created_at', 'updated_at')
+    actions = [export_as_csv_action("Export Selected P2P Orders to CSV", filename_prefix="goalign_p2p_orders")]
 
 @admin.register(CopyAllocation)
 class CopyAllocationAdmin(admin.ModelAdmin):

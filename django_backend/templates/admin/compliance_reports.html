@@ -1,0 +1,446 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block breadcrumbs %}
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Compliance & Regulatory Reports</span>
+{% endblock %}
+
+{% block content %}
+<div class="compliance-hub-container">
+
+  <!-- Header Section -->
+  <div class="hub-header">
+    <div>
+      <h1 class="hub-title">Compliance & Regulatory Audit Hub</h1>
+      <p class="hub-subtitle">Export immutable financial records, regulatory audit trails, and reconciliation ledgers formatted to RFC-4180 standards for external audits and SOC-2 compliance.</p>
+    </div>
+
+    <!-- Quick Date Filter Form -->
+    <div class="hub-date-controls">
+      <form id="date-range-form" method="GET" class="date-range-form">
+        <div class="date-input-group">
+          <label>From:</label>
+          <input type="date" id="start-date-input" name="start_date" value="{{ request.GET.start_date|default:default_start_date }}">
+        </div>
+        <div class="date-input-group">
+          <label>To:</label>
+          <input type="date" id="end-date-input" name="end_date" value="{{ request.GET.end_date|default:default_end_date }}">
+        </div>
+        <button type="button" class="btn-preset" onclick="setPreset('7d')">7D</button>
+        <button type="button" class="btn-preset active" onclick="setPreset('30d')">30D</button>
+        <button type="button" class="btn-preset" onclick="setPreset('all')">All</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Reports Grid -->
+  <div class="reports-grid">
+
+    <!-- 1. General Ledger Journal -->
+    <div class="fintech-card report-card">
+      <div class="report-card-header">
+        <div class="report-icon-box" style="background: rgba(0, 119, 182, 0.12); color: #0077B6;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </div>
+        <div>
+          <span class="report-tag">PRIMARY LEDGER</span>
+          <h2 class="report-name">General Ledger Journal</h2>
+        </div>
+      </div>
+      <p class="report-desc">Full double-entry balanced postings (Debits & Credits) with transaction types, reference IDs, system accounts, and PostgreSQL trigger timestamps.</p>
+      
+      <div class="report-meta-row">
+        <div class="report-stat">
+          <span class="report-stat-label">Total Entries</span>
+          <span class="report-stat-val">{{ ledger_count|default:"0" }}</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-label">Past 30 Days</span>
+          <span class="report-stat-val">{{ ledger_30d|default:"0" }}</span>
+        </div>
+      </div>
+
+      <div class="report-action-row">
+        <a href="javascript:void(0)" onclick="triggerDownload('ledger')" class="btn-fintech btn-fintech-primary" style="width: 100%; justify-content: center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Ledger CSV
+        </a>
+      </div>
+    </div>
+
+    <!-- 2. Audit Trail Logs -->
+    <div class="fintech-card report-card">
+      <div class="report-card-header">
+        <div class="report-icon-box" style="background: rgba(16, 185, 129, 0.12); color: #10B981;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div>
+          <span class="report-tag" style="background: rgba(16, 185, 129, 0.12); color: #10B981;">SECURITY AUDIT</span>
+          <h2 class="report-name">Regulatory Audit Trail</h2>
+        </div>
+      </div>
+      <p class="report-desc">Chronological tamper-evident audit records including administrative overrides, operator approvals, KYC decisions, user status changes, and request IDs.</p>
+      
+      <div class="report-meta-row">
+        <div class="report-stat">
+          <span class="report-stat-label">Total Records</span>
+          <span class="report-stat-val">{{ audit_count|default:"0" }}</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-label">Past 30 Days</span>
+          <span class="report-stat-val">{{ audit_30d|default:"0" }}</span>
+        </div>
+      </div>
+
+      <div class="report-action-row">
+        <a href="javascript:void(0)" onclick="triggerDownload('audit')" class="btn-fintech btn-fintech-primary" style="width: 100%; justify-content: center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Audit Trail CSV
+        </a>
+      </div>
+    </div>
+
+    <!-- 3. Trades & Fees Reconciliation -->
+    <div class="fintech-card report-card">
+      <div class="report-card-header">
+        <div class="report-icon-box" style="background: rgba(0, 180, 216, 0.12); color: #00B4D8;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+          </svg>
+        </div>
+        <div>
+          <span class="report-tag" style="background: rgba(0, 180, 216, 0.12); color: #00B4D8;">FINANCIAL REVENUE</span>
+          <h2 class="report-name">Trading Execution & Fees</h2>
+        </div>
+      </div>
+      <p class="report-desc">Executed trade history, taker/maker fee collections, volume breakdown, and match execution timestamps linking orders to matched counter-trades.</p>
+      
+      <div class="report-meta-row">
+        <div class="report-stat">
+          <span class="report-stat-label">Total Trades</span>
+          <span class="report-stat-val">{{ trades_count|default:"0" }}</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-label">Past 30 Days</span>
+          <span class="report-stat-val">{{ trades_30d|default:"0" }}</span>
+        </div>
+      </div>
+
+      <div class="report-action-row">
+        <a href="javascript:void(0)" onclick="triggerDownload('trades')" class="btn-fintech btn-fintech-primary" style="width: 100%; justify-content: center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Trades CSV
+        </a>
+      </div>
+    </div>
+
+    <!-- 4. Treasury Reserves & Balances -->
+    <div class="fintech-card report-card">
+      <div class="report-card-header">
+        <div class="report-icon-box" style="background: rgba(245, 158, 11, 0.12); color: #F59E0B;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+        </div>
+        <div>
+          <span class="report-tag" style="background: rgba(245, 158, 11, 0.12); color: #F59E0B;">PROOF OF RESERVES</span>
+          <h2 class="report-name">Treasury & Balances Snapshot</h2>
+        </div>
+      </div>
+      <p class="report-desc">Snapshot of total, available, and escrow-locked assets across all user and protocol balances categorized by account type (Spot, Futures, Escrow).</p>
+      
+      <div class="report-meta-row">
+        <div class="report-stat">
+          <span class="report-stat-label">Active Balances</span>
+          <span class="report-stat-val">{{ balances_count|default:"0" }}</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-label">Snapshot Time</span>
+          <span class="report-stat-val" style="font-size: 11px;">Current UTC</span>
+        </div>
+      </div>
+
+      <div class="report-action-row">
+        <a href="javascript:void(0)" onclick="triggerDownload('balances')" class="btn-fintech btn-fintech-primary" style="width: 100%; justify-content: center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Balances CSV
+        </a>
+      </div>
+    </div>
+
+    <!-- 5. Withdrawals & Payouts -->
+    <div class="fintech-card report-card">
+      <div class="report-card-header">
+        <div class="report-icon-box" style="background: rgba(239, 68, 68, 0.12); color: #EF4444;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </div>
+        <div>
+          <span class="report-tag" style="background: rgba(239, 68, 68, 0.12); color: #EF4444;">OUTFLOW RECONCILIATION</span>
+          <h2 class="report-name">Withdrawals & Disbursements</h2>
+        </div>
+      </div>
+      <p class="report-desc">All cryptocurrency payout requests with blockchain networks, beneficiary destination addresses, TxIDs, and administrative approval/rejection audit stamps.</p>
+      
+      <div class="report-meta-row">
+        <div class="report-stat">
+          <span class="report-stat-label">Total Withdrawals</span>
+          <span class="report-stat-val">{{ withdrawals_count|default:"0" }}</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-label">Audit Format</span>
+          <span class="report-stat-val" style="font-size: 11px;">RFC-4180</span>
+        </div>
+      </div>
+
+      <div class="report-action-row">
+        <a href="javascript:void(0)" onclick="triggerDownload('withdrawals')" class="btn-fintech btn-fintech-primary" style="width: 100%; justify-content: center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Withdrawals CSV
+        </a>
+      </div>
+    </div>
+
+    <!-- 6. P2P Escrow & Dispute History -->
+    <div class="fintech-card report-card">
+      <div class="report-card-header">
+        <div class="report-icon-box" style="background: rgba(3, 4, 94, 0.15); color: #0077B6;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/><path d="m11 12 2 0"/>
+          </svg>
+        </div>
+        <div>
+          <span class="report-tag">P2P ARBITRATION</span>
+          <h2 class="report-name">P2P Orders & Disputes</h2>
+        </div>
+      </div>
+      <p class="report-desc">Full record of peer-to-peer escrow transactions, buyer/seller profiles, fiat conversion amounts, and administrative arbitration resolution rationales.</p>
+      
+      <div class="report-meta-row">
+        <div class="report-stat">
+          <span class="report-stat-label">Total P2P Orders</span>
+          <span class="report-stat-val">{{ p2p_count|default:"0" }}</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-label">Resolution Rationale</span>
+          <span class="report-stat-val" style="font-size: 11px;">Included</span>
+        </div>
+      </div>
+
+      <div class="report-action-row">
+        <a href="javascript:void(0)" onclick="triggerDownload('p2p')" class="btn-fintech btn-fintech-primary" style="width: 100%; justify-content: center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export P2P Orders CSV
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<style>
+  .compliance-hub-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  .hub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .hub-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
+  }
+  .hub-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    max-width: 780px;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+  .hub-date-controls {
+    display: flex;
+    align-items: center;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 12px;
+  }
+  .date-range-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .date-input-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .date-input-group input[type="date"] {
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .btn-preset {
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-preset:hover, .btn-preset.active {
+    background: var(--primary-blue);
+    color: #FFFFFF;
+    border-color: var(--primary-blue);
+  }
+  .reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 20px;
+  }
+  .report-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 22px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .report-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  }
+  .report-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+  .report-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .report-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(0, 119, 182, 0.12);
+    color: var(--primary-blue);
+    margin-bottom: 3px;
+  }
+  .report-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+  }
+  .report-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+    min-height: 58px;
+  }
+  .report-meta-row {
+    display: flex;
+    justify-content: space-between;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+  }
+  .report-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .report-stat-label {
+    font-size: 11px;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .report-stat-val {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+
+<script>
+function setPreset(preset) {
+  var today = new Date();
+  var endStr = today.toISOString().split('T')[0];
+  var startStr = '';
+
+  document.querySelectorAll('.btn-preset').forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+
+  if (preset === '7d') {
+    var d7 = new Date();
+    d7.setDate(today.getDate() - 7);
+    startStr = d7.toISOString().split('T')[0];
+    event.target.classList.add('active');
+  } else if (preset === '30d') {
+    var d30 = new Date();
+    d30.setDate(today.getDate() - 30);
+    startStr = d30.toISOString().split('T')[0];
+    event.target.classList.add('active');
+  } else if (preset === 'all') {
+    startStr = '';
+    endStr = '';
+    event.target.classList.add('active');
+  }
+
+  document.getElementById('start-date-input').value = startStr;
+  document.getElementById('end-date-input').value = endStr;
+}
+
+function triggerDownload(reportType) {
+  var s = document.getElementById('start-date-input').value;
+  var e = document.getElementById('end-date-input').value;
+  var url = '/admin/compliance-reports/download/' + reportType + '/?';
+  if (s) url += 'start_date=' + encodeURIComponent(s) + '&';
+  if (e) url += 'end_date=' + encodeURIComponent(e);
+  window.location.href = url;
+}
+</script>
+{% endblock %}

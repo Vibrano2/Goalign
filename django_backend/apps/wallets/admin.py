@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from .models import Balance, WithdrawalRequest
+from apps.audit.export import export_as_csv_action
 
 @admin.register(Balance)
 class BalanceAdmin(admin.ModelAdmin):
@@ -9,6 +10,7 @@ class BalanceAdmin(admin.ModelAdmin):
     list_filter = ('asset', 'account_type')
     search_fields = ('user__username', 'user__email', 'asset')
     readonly_fields = ('user', 'asset', 'account_type', 'total', 'available', 'locked', 'updated_at')
+    actions = [export_as_csv_action("Export Selected Balances to CSV", filename_prefix="goalign_balances")]
 
     def has_add_permission(self, request):
         # Prevent ghost balances; all balances must be initialized via authenticated onboarding or double-entry deposit
@@ -24,6 +26,7 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
     list_filter = ('status', 'asset', 'network', 'created_at')
     search_fields = ('withdrawal_uuid', 'user__username', 'user__email', 'address', 'provider_txid')
     readonly_fields = ('withdrawal_uuid', 'user', 'asset', 'amount', 'network', 'address', 'provider_txid', 'created_at', 'updated_at')
+    actions = [export_as_csv_action("Export Selected Withdrawals to CSV", filename_prefix="goalign_withdrawals")]
 
     def review_action(self, obj):
         if obj.status == 'pending':

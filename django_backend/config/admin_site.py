@@ -1,13 +1,14 @@
 import os
+import csv
 import json
-from datetime import timedelta
+from datetime import timedelta, datetime, date
 from decimal import Decimal
 
 from django.contrib import admin
 from django.urls import path
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponseRedirect, HttpResponseNotAllowed
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed
 from django.contrib import messages
 from django.db.models import Sum, Count, F, Q
 from django.db import transaction
@@ -33,6 +34,8 @@ class GoalignSuperAdminSite(admin.AdminSite):
             path('kyc-queue/', self.admin_view(self.kyc_queue_view), name='kyc_queue'),
             path('withdrawals-queue/', self.admin_view(self.withdrawals_queue_view), name='withdrawals_queue'),
             path('p2p-disputes/', self.admin_view(self.p2p_disputes_view), name='p2p_disputes'),
+            path('compliance-reports/', self.admin_view(self.compliance_reports_view), name='compliance_reports'),
+            path('compliance-reports/download/<str:report_type>/', self.admin_view(self.compliance_download_view), name='compliance_download'),
             path('investigate/<str:reference_id>/', self.admin_view(self.audit_investigate_view), name='audit_investigate'),
             path('api/kyc-action/', self.admin_view(self.kyc_action_api), name='api_kyc_action'),
             path('api/withdrawal-action/', self.admin_view(self.withdrawal_action_api), name='api_withdrawal_action'),
@@ -334,6 +337,193 @@ class GoalignSuperAdminSite(admin.AdminSite):
             'all_count': P2POrder.objects.count(),
         }
         return render(request, 'admin/p2p_disputes.html', context)
+
+    def compliance_reports_view(self, request):
+        now = timezone.now()
+        days_30 = now - timedelta(days=30)
+
+        context = {
+            **self.each_context(request),
+            'title': 'Compliance & Regulatory Audit Hub',
+            'ledger_count': LedgerEntry.objects.count(),
+            'ledger_30d': LedgerEntry.objects.filter(created_at__gte=days_30).count(),
+            'audit_count': AuditLog.objects.count(),
+            'audit_30d': AuditLog.objects.filter(timestamp__gte=days_30).count(),
+            'trades_count': Trade.objects.count(),
+            'trades_30d': Trade.objects.filter(created_at__gte=days_30).count(),
+            'balances_count': Balance.objects.count(),
+            'withdrawals_count': WithdrawalRequest.objects.count(),
+            'p2p_count': P2POrder.objects.count(),
+            'default_start_date': (now - timedelta(days=30)).strftime('%Y-%m-%d'),
+            'default_end_date': now.strftime('%Y-%m-%d'),
+        }
+        return render(request, 'admin/compliance_reports.html', context)
+
+    def compliance_download_view(self, request, report_type):
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+
+        start_dt = None
+        end_dt = None
+        if start_date_str:
+            try:
+                start_dt = timezone.make_aware(datetime.strptime(start_date_str, '%Y-%m-%d'))
+            except Exception:
+                pass
+        if end_date_str:
+            try:
+                end_dt = timezone.make_aware(datetime.strptime(end_date_str, '%Y-%m-%d')).replace(hour=23, minute=59, second=59)
+            except Exception:
+                pass
+
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+
+        if report_type == 'ledger':
+            response['Content-Disposition'] = f'attachment; filename="goalign_ledger_journal_{timestamp}.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['ENTRY_ID', 'TX_ID', 'TRANSACTION_TYPE', 'REFERENCE_ID', 'TX_STATUS', 'USER_EMAIL', 'ACCOUNT_TYPE', 'ASSET', 'DIRECTION', 'AMOUNT', 'CREATED_AT'])
+            qs = LedgerEntry.objects.select_related('ledger_transaction', 'user').order_by('-created_at')
+            if start_dt:
+                qs = qs.filter(created_at__gte=start_dt)
+            if end_dt:
+                qs = qs.filter(created_at__lte=end_dt)
+            for e in qs:
+                tx = e.ledger_transaction
+                user_email = e.user.email if e.user and hasattr(e.user, 'email') else (e.user.username if e.user else 'SYSTEM')
+                writer.writerow([
+                    e.id,
+                    tx.id if tx else '',
+                    tx.transaction_type if tx else '',
+                    tx.reference_id if tx else '',
+                    tx.status if tx else '',
+                    user_email,
+                    e.account_type,
+                    e.asset,
+                    e.direction.upper(),
+                    f"{e.amount:.8f}",
+                    e.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if e.created_at else ''
+                ])
+
+        elif report_type == 'audit':
+            response['Content-Disposition'] = f'attachment; filename="goalign_regulatory_audit_trail_{timestamp}.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['AUDIT_ID', 'TIMESTAMP', 'ACTOR_EMAIL', 'ACTION', 'TARGET_TYPE', 'TARGET_IDENTIFIER', 'REQUEST_ID', 'METADATA'])
+            qs = AuditLog.objects.select_related('actor').order_by('-timestamp')
+            if start_dt:
+                qs = qs.filter(timestamp__gte=start_dt)
+            if end_dt:
+                qs = qs.filter(timestamp__lte=end_dt)
+            for a in qs:
+                actor_email = a.actor.email if a.actor and hasattr(a.actor, 'email') else (a.actor.username if a.actor else 'SYSTEM')
+                meta_json = json.dumps(a.metadata, ensure_ascii=False) if a.metadata else ''
+                writer.writerow([
+                    a.id,
+                    a.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') if a.timestamp else '',
+                    actor_email,
+                    a.action,
+                    a.target_type,
+                    a.target_identifier,
+                    a.request_id or '',
+                    meta_json
+                ])
+
+        elif report_type == 'trades':
+            response['Content-Disposition'] = f'attachment; filename="goalign_trades_reconciliation_{timestamp}.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['TRADE_ID', 'ORDER_ID', 'USER_EMAIL', 'SYMBOL', 'SIDE', 'PRICE', 'AMOUNT', 'FEE', 'CREATED_AT'])
+            qs = Trade.objects.select_related('user', 'order').order_by('-created_at')
+            if start_dt:
+                qs = qs.filter(created_at__gte=start_dt)
+            if end_dt:
+                qs = qs.filter(created_at__lte=end_dt)
+            for t in qs:
+                user_email = t.user.email if t.user else ''
+                writer.writerow([
+                    t.id,
+                    t.order_id or '',
+                    user_email,
+                    t.symbol,
+                    t.side.upper(),
+                    f"{t.price:.8f}",
+                    f"{t.amount:.8f}",
+                    f"{t.fee:.8f}",
+                    t.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if t.created_at else ''
+                ])
+
+        elif report_type == 'balances':
+            response['Content-Disposition'] = f'attachment; filename="goalign_balances_snapshot_{timestamp}.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['BALANCE_ID', 'USER_EMAIL', 'ASSET', 'ACCOUNT_TYPE', 'TOTAL', 'AVAILABLE', 'LOCKED', 'UPDATED_AT'])
+            qs = Balance.objects.select_related('user').order_by('asset', 'account_type')
+            for b in qs:
+                user_email = b.user.email if b.user and hasattr(b.user, 'email') else (b.user.username if b.user else '')
+                writer.writerow([
+                    b.id,
+                    user_email,
+                    b.asset,
+                    b.account_type,
+                    f"{b.total:.8f}",
+                    f"{b.available:.8f}",
+                    f"{b.locked:.8f}",
+                    b.updated_at.strftime('%Y-%m-%d %H:%M:%S UTC') if b.updated_at else ''
+                ])
+
+        elif report_type == 'withdrawals':
+            response['Content-Disposition'] = f'attachment; filename="goalign_withdrawals_reconciliation_{timestamp}.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['WITHDRAWAL_UUID', 'USER_EMAIL', 'ASSET', 'AMOUNT', 'NETWORK', 'ADDRESS', 'STATUS', 'PROVIDER_TXID', 'CREATED_AT', 'UPDATED_AT'])
+            qs = WithdrawalRequest.objects.select_related('user').order_by('-created_at')
+            if start_dt:
+                qs = qs.filter(created_at__gte=start_dt)
+            if end_dt:
+                qs = qs.filter(created_at__lte=end_dt)
+            for w in qs:
+                user_email = w.user.email if w.user and hasattr(w.user, 'email') else (w.user.username if w.user else '')
+                writer.writerow([
+                    str(w.withdrawal_uuid),
+                    user_email,
+                    w.asset,
+                    f"{w.amount:.8f}",
+                    w.network,
+                    w.address,
+                    w.status.upper(),
+                    w.provider_txid or '',
+                    w.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if w.created_at else '',
+                    w.updated_at.strftime('%Y-%m-%d %H:%M:%S UTC') if w.updated_at else ''
+                ])
+
+        elif report_type == 'p2p':
+            response['Content-Disposition'] = f'attachment; filename="goalign_p2p_orders_{timestamp}.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['ORDER_ID', 'BUYER_EMAIL', 'SELLER_EMAIL', 'ASSET', 'CRYPTO_AMOUNT', 'FIAT', 'FIAT_AMOUNT', 'PRICE', 'PAYMENT_METHOD', 'STATUS', 'CREATED_AT', 'UPDATED_AT'])
+            qs = P2POrder.objects.select_related('buyer', 'seller').order_by('-created_at')
+            if start_dt:
+                qs = qs.filter(created_at__gte=start_dt)
+            if end_dt:
+                qs = qs.filter(created_at__lte=end_dt)
+            for p in qs:
+                buyer_email = p.buyer.email if p.buyer else ''
+                seller_email = p.seller.email if p.seller else ''
+                writer.writerow([
+                    p.id,
+                    buyer_email,
+                    seller_email,
+                    p.asset,
+                    f"{p.crypto_amount:.8f}",
+                    p.fiat,
+                    f"{p.fiat_amount:.8f}",
+                    f"{p.price:.8f}",
+                    p.payment_method,
+                    p.status.upper(),
+                    p.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if p.created_at else '',
+                    p.updated_at.strftime('%Y-%m-%d %H:%M:%S UTC') if p.updated_at else ''
+                ])
+        else:
+            messages.error(request, f"Unknown report type: {report_type}")
+            return redirect('/admin/compliance-reports/')
+
+        return response
 
     def audit_investigate_view(self, request, reference_id):
         # Retrieve ledger transaction and its entries
