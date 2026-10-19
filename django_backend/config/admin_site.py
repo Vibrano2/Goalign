@@ -7,7 +7,7 @@ from django.contrib import admin
 from django.urls import path
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect, HttpResponseNotAllowed
 from django.contrib import messages
 from django.db.models import Sum, Count, F, Q
 from django.db import transaction
@@ -32,9 +32,11 @@ class GoalignSuperAdminSite(admin.AdminSite):
         custom_urls = [
             path('kyc-queue/', self.admin_view(self.kyc_queue_view), name='kyc_queue'),
             path('withdrawals-queue/', self.admin_view(self.withdrawals_queue_view), name='withdrawals_queue'),
+            path('p2p-disputes/', self.admin_view(self.p2p_disputes_view), name='p2p_disputes'),
             path('investigate/<str:reference_id>/', self.admin_view(self.audit_investigate_view), name='audit_investigate'),
             path('api/kyc-action/', self.admin_view(self.kyc_action_api), name='api_kyc_action'),
             path('api/withdrawal-action/', self.admin_view(self.withdrawal_action_api), name='api_withdrawal_action'),
+            path('api/p2p-dispute-action/', self.admin_view(self.p2p_dispute_action_api), name='api_p2p_dispute_action'),
             path('api/user-status-action/', self.admin_view(self.user_status_action_api), name='api_user_status_action'),
         ]
         return custom_urls + urls
@@ -135,6 +137,9 @@ class GoalignSuperAdminSite(admin.AdminSite):
         open_orders = Order.objects.filter(status='open').count()
         active_positions = Position.objects.filter(status='open').count()
 
+        # 9. P2P Disputes Queue
+        disputed_p2p_count = P2POrder.objects.filter(status='disputed').count()
+
         return {
             'total_users': total_users,
             'users_30d': users_30d,
@@ -147,6 +152,7 @@ class GoalignSuperAdminSite(admin.AdminSite):
             'pending_wds_amount': f"{pending_wds_amount:,.2f}",
             'pending_kyc_count': pending_kyc_count,
             'total_kyc_submissions': total_kyc_submissions,
+            'disputed_p2p_count': disputed_p2p_count,
             'platform_revenue': f"{platform_revenue:,.4f}",
             'open_orders': open_orders,
             'active_positions': active_positions,
@@ -247,6 +253,13 @@ class GoalignSuperAdminSite(admin.AdminSite):
 
         # 5. Pending Notifications Summary
         pending_alerts = []
+        if metrics.get('disputed_p2p_count', 0) > 0:
+            pending_alerts.append({
+                'level': 'danger',
+                'title': f"{metrics['disputed_p2p_count']} P2P Escrow Dispute{'s' if metrics['disputed_p2p_count'] > 1 else ''}",
+                'desc': "Peer-to-peer orders flagged for administrative arbitration.",
+                'link': '/admin/p2p-disputes/?status=disputed'
+            })
         if metrics['pending_wds_count'] > 0:
             pending_alerts.append({
                 'level': 'warning',
@@ -302,6 +315,26 @@ class GoalignSuperAdminSite(admin.AdminSite):
         }
         return render(request, 'admin/withdrawals_queue.html', context)
 
+    def p2p_disputes_view(self, request):
+        status_filter = request.GET.get('status', 'disputed' if P2POrder.objects.filter(status='disputed').exists() else 'all')
+        orders = P2POrder.objects.select_related('buyer', 'seller', 'ad').order_by('-created_at')
+        if status_filter != 'all':
+            orders = orders.filter(status=status_filter)
+
+        context = {
+            **self.each_context(request),
+            'title': 'P2P Dispute Management Console',
+            'orders': orders,
+            'status_filter': status_filter,
+            'disputed_count': P2POrder.objects.filter(status='disputed').count(),
+            'pending_count': P2POrder.objects.filter(status='pending').count(),
+            'paid_count': P2POrder.objects.filter(status='paid').count(),
+            'completed_count': P2POrder.objects.filter(status='completed').count(),
+            'canceled_count': P2POrder.objects.filter(status='canceled').count(),
+            'all_count': P2POrder.objects.count(),
+        }
+        return render(request, 'admin/p2p_disputes.html', context)
+
     def audit_investigate_view(self, request, reference_id):
         # Retrieve ledger transaction and its entries
         ledger_tx = LedgerTransaction.objects.filter(reference_id=reference_id).first()
@@ -333,8 +366,9 @@ class GoalignSuperAdminSite(admin.AdminSite):
     # --------------------------------------------------------------------------
     # Operational Action APIs (CSRF & Staff-Protected)
     # --------------------------------------------------------------------------
-    @require_POST
     def kyc_action_api(self, request):
+        if request.method != 'POST':
+            return HttpResponseNotAllowed(['POST'])
         app_id = request.POST.get('application_id')
         action = request.POST.get('action') # 'approve' | 'reject'
         reason = request.POST.get('reason', '')
@@ -368,8 +402,9 @@ class GoalignSuperAdminSite(admin.AdminSite):
         next_url = request.POST.get('next', '/admin/kyc-queue/')
         return redirect(next_url)
 
-    @require_POST
     def withdrawal_action_api(self, request):
+        if request.method != 'POST':
+            return HttpResponseNotAllowed(['POST'])
         wd_uuid = request.POST.get('withdrawal_uuid')
         action = request.POST.get('action') # 'approve' | 'reject'
         reason = request.POST.get('reason', '')
@@ -422,8 +457,9 @@ class GoalignSuperAdminSite(admin.AdminSite):
 
         return redirect(request.POST.get('next', '/admin/withdrawals-queue/'))
 
-    @require_POST
     def user_status_action_api(self, request):
+        if request.method != 'POST':
+            return HttpResponseNotAllowed(['POST'])
         user_id = request.POST.get('user_id')
         action = request.POST.get('action') # 'suspend' | 'activate'
         account = get_object_or_404(GoalignAccount, id=user_id)
@@ -458,6 +494,68 @@ class GoalignSuperAdminSite(admin.AdminSite):
             messages.success(request, f"User account {account.email} has been activated.")
 
         return redirect(request.POST.get('next', '/admin/authentication/goalignaccount/'))
+
+    def p2p_dispute_action_api(self, request):
+        if request.method != 'POST':
+            return HttpResponseNotAllowed(['POST'])
+        order_id = request.POST.get('order_id')
+        action = request.POST.get('action')  # 'release_to_buyer' | 'refund_to_seller'
+        reason = request.POST.get('reason', '').strip()
+
+        order = get_object_or_404(P2POrder.objects.select_related('buyer', 'seller'), id=order_id)
+
+        if order.status not in ['disputed', 'paid', 'pending']:
+            messages.error(request, f"Order #{order_id} is already '{order.status}'. Cannot perform arbitration.")
+            return redirect(request.POST.get('next', '/admin/p2p-disputes/'))
+
+        with transaction.atomic():
+            if action == 'release_to_buyer':
+                order.status = 'completed'
+                order.save(update_fields=['status', 'updated_at'])
+
+                AuditLog.objects.create(
+                    actor=request.user,
+                    action='P2P_DISPUTE_RELEASED_TO_BUYER',
+                    target_type='P2POrder',
+                    target_identifier=str(order.id),
+                    metadata={
+                        'action': 'release_to_buyer',
+                        'order_id': order.id,
+                        'asset': order.asset,
+                        'crypto_amount': str(order.crypto_amount),
+                        'buyer_id': order.buyer.id if order.buyer else None,
+                        'buyer_email': order.buyer.email if order.buyer else None,
+                        'seller_id': order.seller.id if order.seller else None,
+                        'seller_email': order.seller.email if order.seller else None,
+                        'reason': reason or 'Admin arbitration release to buyer'
+                    }
+                )
+                messages.success(request, f"Dispute resolved: Order #{order.id} escrow released to Buyer ({order.buyer.email if order.buyer else 'Buyer'}). Reason: {reason or 'Arbitration complete'}")
+
+            elif action == 'refund_to_seller':
+                order.status = 'canceled'
+                order.save(update_fields=['status', 'updated_at'])
+
+                AuditLog.objects.create(
+                    actor=request.user,
+                    action='P2P_DISPUTE_REFUNDED_TO_SELLER',
+                    target_type='P2POrder',
+                    target_identifier=str(order.id),
+                    metadata={
+                        'action': 'refund_to_seller',
+                        'order_id': order.id,
+                        'asset': order.asset,
+                        'crypto_amount': str(order.crypto_amount),
+                        'buyer_id': order.buyer.id if order.buyer else None,
+                        'buyer_email': order.buyer.email if order.buyer else None,
+                        'seller_id': order.seller.id if order.seller else None,
+                        'seller_email': order.seller.email if order.seller else None,
+                        'reason': reason or 'Admin arbitration refund to seller'
+                    }
+                )
+                messages.warning(request, f"Dispute resolved: Order #{order.id} escrow refunded to Seller ({order.seller.email if order.seller else 'Seller'}). Reason: {reason or 'Arbitration refund'}")
+
+        return redirect(request.POST.get('next', '/admin/p2p-disputes/'))
 
 
 # Instantiate global custom admin site with standard 'admin' namespace

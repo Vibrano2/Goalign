@@ -1,0 +1,282 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block breadcrumbs %}
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">P2P Dispute Resolution Console</span>
+{% endblock %}
+
+{% block content %}
+<div class="queue-page-container">
+
+  <!-- Queue Header -->
+  <div class="queue-header-row">
+    <div>
+      <h1 class="queue-title">P2P Escrow & Dispute Resolution</h1>
+      <p class="queue-subtitle">Arbitrate disputed peer-to-peer orders, inspect escrow locked balances, and execute binding release or refund decisions.</p>
+    </div>
+
+    <!-- Filter Pills -->
+    <div class="queue-filter-group">
+      <a href="?status=disputed" class="filter-pill {% if status_filter == 'disputed' %}active{% endif %}">
+        Disputed ({{ disputed_count }})
+      </a>
+      <a href="?status=paid" class="filter-pill {% if status_filter == 'paid' %}active{% endif %}">
+        Paid ({{ paid_count }})
+      </a>
+      <a href="?status=pending" class="filter-pill {% if status_filter == 'pending' %}active{% endif %}">
+        Pending ({{ pending_count }})
+      </a>
+      <a href="?status=completed" class="filter-pill {% if status_filter == 'completed' %}active{% endif %}">
+        Completed ({{ completed_count }})
+      </a>
+      <a href="?status=canceled" class="filter-pill {% if status_filter == 'canceled' %}active{% endif %}">
+        Canceled ({{ canceled_count }})
+      </a>
+      <a href="?status=all" class="filter-pill {% if status_filter == 'all' %}active{% endif %}">
+        All Orders ({{ all_count }})
+      </a>
+    </div>
+  </div>
+
+  <!-- P2P Orders Table -->
+  <div class="fintech-card">
+    <div class="table-wrapper">
+      <table class="fintech-table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Buyer</th>
+            <th>Seller</th>
+            <th>Asset & Amount</th>
+            <th>Fiat Value</th>
+            <th>Price</th>
+            <th>Payment Method</th>
+            <th>Escrow Status</th>
+            <th>Created At</th>
+            <th style="text-align: right;">Arbitration Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ord in orders %}
+            <tr>
+              <td>
+                <span class="hash-monospace" style="color: var(--primary-blue); font-weight: 700;">#{{ ord.id }}</span>
+              </td>
+              <td>
+                <div class="cell-user">
+                  <span class="user-fullname">{{ ord.buyer.email|default:"None" }}</span>
+                  <span class="hash-monospace">UID: {{ ord.buyer.firebase_uid|slice:":10" }}...</span>
+                </div>
+              </td>
+              <td>
+                <div class="cell-user">
+                  <span class="user-fullname">{{ ord.seller.email|default:"None" }}</span>
+                  <span class="hash-monospace">UID: {{ ord.seller.firebase_uid|slice:":10" }}...</span>
+                </div>
+              </td>
+              <td>
+                <span class="amount-val" style="font-size: 13px;">{{ ord.crypto_amount }}</span>
+                <span class="badge badge-info" style="margin-left: 4px;">{{ ord.asset }}</span>
+              </td>
+              <td>
+                <span style="font-weight: 700; color: var(--text-main);">{{ ord.fiat_amount }} {{ ord.fiat }}</span>
+              </td>
+              <td>
+                <span style="font-size: 12px; color: var(--text-muted);">{{ ord.price }} {{ ord.fiat }}/{{ ord.asset }}</span>
+              </td>
+              <td>
+                <span class="badge badge-neutral">{{ ord.payment_method }}</span>
+              </td>
+              <td>
+                {% if ord.status == 'disputed' %}
+                  <span class="badge badge-danger" style="animation: pulse 2s infinite;">DISPUTED</span>
+                {% elif ord.status == 'paid' %}
+                  <span class="badge badge-info">BUYER PAID</span>
+                {% elif ord.status == 'pending' %}
+                  <span class="badge badge-warning">PENDING</span>
+                {% elif ord.status == 'completed' %}
+                  <span class="badge badge-success">COMPLETED</span>
+                {% elif ord.status == 'canceled' %}
+                  <span class="badge badge-neutral">CANCELED</span>
+                {% else %}
+                  <span class="badge badge-neutral">{{ ord.status|upper }}</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 12px; color: var(--text-muted);">{{ ord.created_at|date:"Y-m-d H:i" }}</td>
+              <td style="text-align: right;">
+                {% if ord.status == 'disputed' or ord.status == 'paid' or ord.status == 'pending' %}
+                  <div class="btn-group-sm" style="justify-content: flex-end;">
+                    <button type="button" class="btn-sm success" onclick="openArbitrationModal('{{ ord.id }}', 'release_to_buyer', '{{ ord.crypto_amount }} {{ ord.asset }}', '{{ ord.buyer.email }}', '{{ ord.seller.email }}')">
+                      Release to Buyer
+                    </button>
+                    <button type="button" class="btn-sm danger" onclick="openArbitrationModal('{{ ord.id }}', 'refund_to_seller', '{{ ord.crypto_amount }} {{ ord.asset }}', '{{ ord.buyer.email }}', '{{ ord.seller.email }}')">
+                      Refund to Seller
+                    </button>
+                  </div>
+                {% else %}
+                  <span style="font-size: 12px; color: var(--text-subtle); font-style: italic;">Settled</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="10" style="text-align: center; padding: 48px; color: var(--text-muted);">
+                <div class="empty-state">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success-green); margin-bottom: 12px;">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  <p style="font-weight: 600; font-size: 14px; color: var(--text-main);">No peer-to-peer orders found</p>
+                  <p style="font-size: 13px; color: var(--text-muted);">All P2P escrow trades are in order and no unresolved disputes exist in this filter view.</p>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Arbitration Resolution Modal -->
+<div class="fintech-modal-overlay" id="arbitration-modal">
+  <div class="fintech-modal-card" style="max-width: 520px;">
+    <h3 id="modal-title" style="font-size: 17px; font-weight: 700; margin-bottom: 8px;">Arbitrate P2P Escrow Dispute</h3>
+    <p id="modal-summary" style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;"></p>
+
+    <div style="background: var(--bg-surface-alt); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 12px; color: var(--text-muted);">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span>Order Reference:</span>
+        <strong id="modal-order-ref" style="color: var(--text-main); font-family: 'JetBrains Mono', monospace;">#0</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span>Escrow Escorted Crypto:</span>
+        <strong id="modal-amount-ref" style="color: var(--text-main);">0.00</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span>Buyer Email:</span>
+        <span id="modal-buyer-ref" style="color: var(--text-main); font-weight: 600;">-</span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span>Seller Email:</span>
+        <span id="modal-seller-ref" style="color: var(--text-main); font-weight: 600;">-</span>
+      </div>
+    </div>
+
+    <form method="POST" action="{% url 'admin:api_p2p_dispute_action' %}">
+      {% csrf_token %}
+      <input type="hidden" name="order_id" id="modal-order-id" value="">
+      <input type="hidden" name="action" id="modal-action-val" value="">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
+          Operator Arbitration Rationale <span style="color: var(--danger-red);">*</span>
+        </label>
+        <textarea name="reason" rows="3" required id="modal-reason-input" placeholder="Document verified bank transfer slips, chat forensic evidence, or merchant non-response..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-surface-alt); color: var(--text-main); font-size: 13px; font-family: inherit;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-fintech btn-fintech-secondary" onclick="closeArbitrationModal()">Cancel</button>
+        <button type="submit" id="modal-submit-btn" class="btn-fintech">Confirm Arbitration</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .queue-page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  .queue-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .queue-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+  .queue-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .queue-filter-group {
+    display: flex;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+  .filter-pill {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+  .filter-pill:hover {
+    color: var(--text-main);
+    text-decoration: none;
+  }
+  .filter-pill.active {
+    background: var(--primary-blue);
+    color: #FFFFFF;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+  }
+</style>
+
+<script>
+function openArbitrationModal(orderId, action, amount, buyer, seller) {
+  document.getElementById('modal-order-id').value = orderId;
+  document.getElementById('modal-action-val').value = action;
+  document.getElementById('modal-order-ref').innerText = '#' + orderId;
+  document.getElementById('modal-amount-ref').innerText = amount;
+  document.getElementById('modal-buyer-ref').innerText = buyer || 'None';
+  document.getElementById('modal-seller-ref').innerText = seller || 'None';
+
+  var titleEl = document.getElementById('modal-title');
+  var summaryEl = document.getElementById('modal-summary');
+  var submitBtn = document.getElementById('modal-submit-btn');
+  var reasonInput = document.getElementById('modal-reason-input');
+
+  if (action === 'release_to_buyer') {
+    titleEl.innerText = "Release Escrow to Buyer";
+    titleEl.style.color = "var(--success-green)";
+    summaryEl.innerText = "You are arbitrating this dispute in favor of the Buyer. The locked escrow (" + amount + ") will be permanently transferred to the buyer's spot account and the order marked as COMPLETED.";
+    submitBtn.className = "btn-fintech btn-fintech-success";
+    submitBtn.innerText = "Authorize Release to Buyer";
+    reasonInput.placeholder = "e.g. Validated bank receipt reference #TX98234 confirmed with merchant bank.";
+  } else {
+    titleEl.innerText = "Refund Escrow to Seller";
+    titleEl.style.color = "var(--danger-red)";
+    summaryEl.innerText = "You are arbitrating this dispute in favor of the Seller. The locked escrow (" + amount + ") will be returned to the seller and the order marked as CANCELED.";
+    submitBtn.className = "btn-fintech btn-fintech-danger";
+    submitBtn.innerText = "Authorize Refund to Seller";
+    reasonInput.placeholder = "e.g. Buyer failed to present payment proof after 48h dispute timer expired.";
+  }
+
+  document.getElementById('arbitration-modal').classList.add('open');
+}
+
+function closeArbitrationModal() {
+  document.getElementById('arbitration-modal').classList.remove('open');
+}
+</script>
+{% endblock %}

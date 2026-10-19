@@ -682,6 +682,15 @@
           <span class="nav-label">Withdrawals Queue</span>
           {% if metrics.pending_wds_count %}<span class="nav-badge danger">{{ metrics.pending_wds_count }}</span>{% endif %}
         </a>
+        <a href="{% url 'admin:p2p_disputes' %}" class="nav-link {% if '/admin/p2p-disputes/' in request.path %}active{% endif %}">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/><path d="m11 12 2 0"/>
+            </svg>
+          </span>
+          <span class="nav-label">P2P Disputes Queue</span>
+          {% if metrics.disputed_p2p_count %}<span class="nav-badge danger">{{ metrics.disputed_p2p_count }}</span>{% endif %}
+        </a>
       </div>
 
       <!-- 1. AUDIT & COMPLIANCE -->
